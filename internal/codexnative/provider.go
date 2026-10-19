@@ -24,6 +24,7 @@ import (
 )
 
 type nativeThread struct {
+	Path     string `json:"path"`
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Preview  string `json:"preview"`
@@ -56,19 +57,20 @@ type pendingRequest struct {
 	Resolved  chan struct{}
 }
 type Provider struct {
-	profile    core.Profile
-	socket     string
-	connect    sync.Mutex
-	actions    sync.Mutex
-	mu         sync.Mutex
-	rpc        *rpcClient
-	epoch      string
-	sessions   map[string]core.Session
-	pending    map[string]*pendingRequest
-	subscribed map[string]bool
-	lastRepair time.Time
-	listed     map[string]nativeThread // last thread listing, see threads
-	listedAt   time.Time
+	observedTurns map[string]observedTurn
+	profile       core.Profile
+	socket        string
+	connect       sync.Mutex
+	actions       sync.Mutex
+	mu            sync.Mutex
+	rpc           *rpcClient
+	epoch         string
+	sessions      map[string]core.Session
+	pending       map[string]*pendingRequest
+	subscribed    map[string]bool
+	lastRepair    time.Time
+	listed        map[string]nativeThread // last thread listing, see threads
+	listedAt      time.Time
 }
 
 func New(profile core.Profile) (core.Provider, error) {
@@ -523,6 +525,7 @@ func (p *Provider) Discover(ctx context.Context) ([]core.Session, error) {
 		s := p.merge(t, loaded[t.ID])
 		if !loaded[t.ID] && (!locksKnown || locks[t.ID]) {
 			s = p.externalWriterState(s)
+			s = p.observeExternalTurn(s, t.Path)
 			s = p.offerExternalQueue(ctx, r, s)
 		}
 		out = append(out, s)
@@ -560,6 +563,7 @@ func (p *Provider) Discover(ctx context.Context) ([]core.Session, error) {
 	for id := range p.sessions {
 		if !seen[id] && !loaded[id] {
 			delete(p.sessions, id)
+			delete(p.observedTurns, id)
 		}
 	}
 	for _, s := range out {

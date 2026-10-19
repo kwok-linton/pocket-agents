@@ -1,6 +1,7 @@
 // English text sent by the backend -> Chinese, used by tServer(). Keys that
 // end in ": " match as prefixes (a technical detail follows).
 export const zhFromServer: Record<string, string> = {
+  "A live native writer outside the shared daemon owns this thread. Turn status comes from its native history; control stays in the original app or terminal.": "此会话在原来的应用或终端中打开；轮次状态根据原生记录同步，控制操作仍需在原应用或终端进行。",
   "Native background startup failed before creating conversation history.": "原生后台会话启动失败，未生成聊天记录。",
   "completed native session has an invalid background ID": "已完成的原生会话后台标识无效，请刷新后重试。",
   "native instance changed; refresh before deleting": "原生实例已变化，请刷新后再删除。",
