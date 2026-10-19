@@ -1,0 +1,27 @@
+{
+  "name": "pocket-agents-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build && node scripts/seal-pwa.mjs",
+    "test": "node --experimental-strip-types --test src/push-state.test.ts src/i18n.test.ts src/api.test.ts src/history-sync.test.ts src/read-loop.test.ts src/event-connection.test.ts src/action-recovery.test.ts src/push-registration.test.ts src/keyboard-viewport.test.ts src/view-data.test.ts src/artifact-links.test.ts src/model.test.ts src/latest-operation.test.ts src/terminal-connection.test.ts src/terminal-input.test.ts src/terminal-menu.test.ts src/native-failure.test.ts src/send-draft.test.ts src/voice-text.test.ts src/voice-session.test.ts src/project-groups.test.ts src/overview.test.ts src/transcript.test.ts src/reply-progress.test.ts src/discovery.test.ts tests/sw.test.mjs && node --test tests/markdown.test.mjs",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  },
+  "license": "PolyForm-Noncommercial-1.0.0"
+}

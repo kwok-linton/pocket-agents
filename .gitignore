@@ -1,0 +1,25 @@
+node_modules/
+web/dist/
+internal/web/dist/
+bin/
+.artifacts/
+.DS_Store
+*.log
+.env
+coverage.out
+__pycache__/
+*.pyc
+
+# Private uploads, runtime state and signing identities
+.pocket-attachments/
+.pocket-agents*/
+.pocket-agents-signing/
+.env.*
+!.env.example
+*.key
+*.p12
+*.pfx
+*.tsbuildinfo
+
+# Private agent worktrees and local publication notes
+.claude/

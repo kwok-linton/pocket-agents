@@ -1,0 +1,31 @@
+import type { Event as AgentEvent, History, Message } from "./types.ts";
+
+export function applyHistoryDelta(previous: History | undefined, tag: string | undefined, input: unknown): History | undefined {
+  const delta = input as History & { base?: string; order?: string[] };
+  if (!previous || !tag || delta?.base !== tag || !Array.isArray(delta.order) || !Array.isArray(delta.messages)) return;
+  const messages = new Map(previous.messages.map(m => [m.id, m]));
+  for (const m of delta.messages) {
+    if (!m || typeof m.id !== "string") return;
+    messages.set(m.id, m);
+  }
+  const ordered: Message[] = [];
+  const seen = new Set<string>();
+  for (const id of delta.order) {
+    const message = messages.get(id);
+    if (!message || seen.has(id)) return;
+    seen.add(id);
+    ordered.push(message);
+  }
+  return { messages: ordered, cursor: delta.cursor, hasMore: delta.hasMore, boundary: delta.boundary };
+}
+
+export function affectsSession(events: AgentEvent[], id: string, nodeId?: string): boolean {
+  return events.some(event => {
+    if (event.sessionId === id) return true;
+    if (nodeId && event.nodeId && event.nodeId !== nodeId) return false;
+    if (event.kind === "device") return true;
+    if (event.kind !== "snapshot") return false;
+    const ids = (event.data as {sessionIds?: string[]} | undefined)?.sessionIds;
+    return !ids || ids.includes(id);
+  });
+}

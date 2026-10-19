@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Pocket Agents logo">
+<defs><linearGradient id="tile" x2="0" y2="1"><stop stop-color="#1f3527"/><stop offset="1" stop-color="#0d1812"/></linearGradient></defs>
+<rect width="256" height="256" rx="56" fill="url(#tile)"/>
+<g transform="translate(128 134) scale(1.12) translate(-128 -146)">
+<circle cx="128" cy="126" r="54" fill="#e6f8b0"/>
+<rect x="102" y="96" width="16" height="26" rx="8" fill="#0f1a14"/><rect x="138" y="96" width="16" height="26" rx="8" fill="#0f1a14"/>
+<path d="M44 132H212V164Q212 180 197 188L142 214Q128 220 114 214L59 188Q44 180 44 164Z" fill="#a9d064"/>
+<rect x="66" y="121" width="26" height="23" rx="11.5" fill="#e6f8b0"/><rect x="164" y="121" width="26" height="23" rx="11.5" fill="#e6f8b0"/>
+</g>
+</svg>

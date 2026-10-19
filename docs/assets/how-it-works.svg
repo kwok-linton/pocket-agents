@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-label="How Pocket Agents works: your phone connects over Tailscale to the controller, which relays to Claude Code and Codex running on your own computers.">
+<defs>
+<linearGradient id="bg" x2="1" y2="1"><stop stop-color="#14261c"/><stop offset="1" stop-color="#0a120f"/></linearGradient>
+<linearGradient id="lime" x2="0" y2="1"><stop stop-color="#e6f6c3"/><stop offset="1" stop-color="#aecd78"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#c4da9c"/></marker>
+</defs>
+<rect width="1200" height="440" rx="24" fill="url(#bg)"/>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+<!-- column labels -->
+<g fill="#7f948a" font-size="13" font-weight="600" letter-spacing="1.5">
+<text x="150" y="62" text-anchor="middle">ANYWHERE</text>
+<text x="560" y="62" text-anchor="middle">ALWAYS ON</text>
+<text x="975" y="62" text-anchor="middle">YOUR COMPUTERS</text>
+</g>
+<!-- phone -->
+<g transform="translate(100 96)">
+<rect width="100" height="190" rx="22" fill="#15241c" stroke="#7c9962" stroke-width="2"/>
+<rect x="36" y="10" width="28" height="7" rx="3.5" fill="#050806"/>
+<rect x="14" y="34" width="72" height="22" rx="6" fill="#203528"/><rect x="14" y="62" width="72" height="22" rx="6" fill="#4a3d1e" stroke="#b8933e"/><rect x="14" y="90" width="72" height="22" rx="6" fill="#203528"/>
+<rect x="14" y="146" width="72" height="26" rx="8" fill="#22322b"/>
+<circle cx="78" cy="73" r="4" fill="#f0c060"/>
+</g>
+<text x="150" y="320" fill="#eef3ea" font-size="20" font-weight="650" text-anchor="middle">Your phone</text>
+<text x="150" y="345" fill="#93a79a" font-size="14" text-anchor="middle">Installable web app</text>
+<text x="150" y="365" fill="#93a79a" font-size="14" text-anchor="middle">with push notifications</text>
+<!-- link 1 -->
+<path d="M226 190H440" stroke="#c4da9c" stroke-width="2.5" stroke-dasharray="7 7" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+<rect x="250" y="150" width="166" height="28" rx="14" fill="#1b2d22" stroke="#3d5544"/>
+<text x="333" y="169" fill="#cfe3b0" font-size="13" font-weight="600" text-anchor="middle">HTTPS · Tailscale</text>
+<!-- controller -->
+<g transform="translate(460 106)">
+<rect width="200" height="170" rx="26" fill="#18291f" stroke="#c4da9c" stroke-opacity=".55" stroke-width="2"/>
+<g transform="translate(70 22) scale(.36)">
+<path d="M118 28Q124.5 80 166 86Q124.5 92 118 144Q111.5 92 70 86Q111.5 80 118 28Z" fill="#effad6" transform="translate(-50 -24)"/>
+<path d="M174 50Q176 66 190 68Q176 70 174 86Q172 70 158 68Q172 66 174 50Z" fill="#c4da9c" transform="translate(-50 -24)"/>
+<path d="M54 114H202V172Q202 184 191 190L139 214Q128 219 117 214L65 190Q54 184 54 172Z" fill="url(#lime)" transform="translate(-50 -24)"/>
+</g>
+<text x="100" y="118" fill="#eef3ea" font-size="20" font-weight="650" text-anchor="middle">Controller</text>
+<text x="100" y="143" fill="#93a79a" font-size="14" text-anchor="middle">Login · routing · index</text>
+</g>
+<text x="560" y="320" fill="#93a79a" font-size="14" text-anchor="middle">One small Go binary,</text>
+<text x="560" y="340" fill="#93a79a" font-size="14" text-anchor="middle">on any computer you choose</text>
+<!-- links 2 -->
+<path d="M664 172C730 172 740 128 800 128" fill="none" stroke="#c4da9c" stroke-width="2.5" stroke-dasharray="7 7" marker-end="url(#arrow)"/>
+<path d="M664 210C730 210 740 254 800 254" fill="none" stroke="#c4da9c" stroke-width="2.5" stroke-dasharray="7 7" marker-end="url(#arrow)"/>
+<!-- devices -->
+<g transform="translate(810 84)">
+<rect width="330" height="88" rx="18" fill="#15241c" stroke="#3d5544" stroke-width="1.5"/>
+<text x="22" y="36" fill="#eef3ea" font-size="18" font-weight="650">Studio Mac</text>
+<rect x="22" y="50" width="108" height="24" rx="12" fill="#2a2418" stroke="#8a6a3c"/><text x="76" y="67" fill="#f0cfa0" font-size="13" font-weight="600" text-anchor="middle">Claude Code</text>
+<rect x="140" y="50" width="72" height="24" rx="12" fill="#1c2a2a" stroke="#4f7472"/><text x="176" y="67" fill="#b9dcd8" font-size="13" font-weight="600" text-anchor="middle">Codex</text>
+</g>
+<g transform="translate(810 210)">
+<rect width="330" height="88" rx="18" fill="#15241c" stroke="#3d5544" stroke-width="1.5"/>
+<text x="22" y="36" fill="#eef3ea" font-size="18" font-weight="650">Build Server</text>
+<rect x="22" y="50" width="72" height="24" rx="12" fill="#1c2a2a" stroke="#4f7472"/><text x="58" y="67" fill="#b9dcd8" font-size="13" font-weight="600" text-anchor="middle">Codex</text>
+</g>
+<text x="975" y="340" fill="#93a79a" font-size="14" text-anchor="middle">Native sessions stay on each device</text>
+<!-- footer -->
+<path d="M60 392H1140" stroke="#26372d"/>
+<text x="600" y="420" fill="#a9bbaf" font-size="15" text-anchor="middle">Nothing is imported or copied — you continue the same native Claude Code and Codex conversations.</text>
+</g>
+</svg>

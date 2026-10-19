@@ -1,0 +1,573 @@
+/*
+ * Visual polish layer. Linked from index.html after the entry script, so it is
+ * bundled after style.css and refines it without rewriting component rules.
+ *
+ * Direction: keep the forest-green identity and make it feel physical — two
+ * layer elevation with translucent hairlines, one ease-out curve, press
+ * feedback on everything tappable, one orchestrated entrance per page, and a
+ * live ring only where something is actually running. Hover effects apply to
+ * pointer devices only so touches never leave a sticky hover state.
+ */
+:root {
+  --ink: #0f1714;
+  --moss: #18231e;
+  --sage: #c4da9c;
+  --amber: #e3bc7b;
+  --hairline: rgb(196 218 156 / 0.1);
+  --hairline-strong: rgb(196 218 156 / 0.2);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --elev-1: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.22), 0 6px 16px -10px rgb(0 0 0 / 0.5);
+  --elev-2: inset 0 1px 0 rgb(255 255 255 / 0.045), 0 2px 4px rgb(0 0 0 / 0.22), 0 16px 32px -14px rgb(0 0 0 / 0.6);
+  --elev-3: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.35), 0 32px 80px -20px rgb(0 0 0 / 0.7);
+  --focus-ring: 0 0 0 3px rgb(196 218 156 / 0.2);
+  --attachment-surface: #1c2421;
+  --attachment-icon: #2b3530;
+  /* DM Sans was declared but never shipped (CSP allows only same-origin
+     fonts), so text silently fell back. Use the platform faces on purpose. */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Segoe UI", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body { background: var(--ink); }
+@media (pointer: fine) {
+  html { overscroll-behavior: none; }
+  * { scrollbar-width: thin; scrollbar-color: #33453a transparent; }
+}
+::selection { background: rgb(196 218 156 / 0.28); color: #f4f8ef; }
+
+/* Type: balanced headings, numbers that do not jitter as they update. */
+h1, h2, h3 { text-wrap: balance; }
+p, .message-body { text-wrap: pretty; }
+.summary-card strong, .session-time, time, .notification-item time, .pending-count {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.summary-card strong { font-weight: 500; letter-spacing: -0.03em; }
+.page-heading h1 { letter-spacing: -0.02em; }
+/* Tracked-caps English eyebrows above Chinese titles read as template
+   decoration; the titles already say where you are. */
+.page-heading .eyebrow { display: none; }
+
+/* Motion: list the properties; never transition layout. */
+.button, .icon-button, .nav-item, .session-card, .summary-card, .notification-item,
+.text-button, .send-button, .back-button, .filter-toggle, .question-option,
+.chat-tool-button, .jump-to-latest, .connection-status-link, .load-more,
+.provider-picker > button, .device-picker button, .project-chips button,
+.session-view-switch button, .compact-disclosure, .device-branch > summary {
+  transition:
+    background-color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out),
+    color 160ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
+    transform 160ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+/* Press feedback. Small controls compress more than large surfaces. */
+:is(.button, .icon-button, .nav-item, .text-button, .send-button, .back-button,
+.filter-toggle, .question-option, .chat-tool-button, .jump-to-latest,
+.connection-status-link, .load-more, .provider-picker > button, .project-chips button,
+.session-view-switch button, .compact-disclosure):active:not(:disabled) {
+  transform: scale(0.96);
+}
+:is(.session-card, .summary-card, .notification-item, .device-picker button):active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+/* Inputs: a soft ring follows the border change. */
+input, textarea, select {
+  transition: border-color 160ms var(--ease-out), box-shadow 200ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+input:focus, textarea:focus, select:focus { box-shadow: var(--focus-ring); }
+select { background-color: #111b18; color: var(--text); }
+.composer { box-shadow: var(--elev-1); transition: border-color 160ms var(--ease-out), box-shadow 220ms var(--ease-out); }
+.composer:focus-within { box-shadow: var(--elev-1), var(--focus-ring); }
+
+/* Surfaces: translucent hairline plus two-layer shadow. */
+.session-card, .notification-item, .summary-card, .settings-card,
+.device-branch, .approval-card {
+  border-color: var(--hairline);
+  box-shadow: var(--elev-1);
+}
+.session-card { background: var(--moss); }
+@media (hover: hover) and (pointer: fine) {
+  .session-card:hover, .notification-item:hover:not(:disabled), .summary-card:hover {
+    border-color: var(--hairline-strong);
+    box-shadow: var(--elev-2);
+    transform: translateY(-1px);
+  }
+  .session-card:hover .session-title > svg:last-child { transform: translateX(2px); }
+  .button:hover:not(:disabled) { border-color: var(--hairline-strong); }
+}
+.session-title > svg:last-child { transition: transform 200ms var(--ease-out), color 160ms var(--ease-out); }
+
+/* Primary actions get a lit top edge and a tinted glow, not a flat slab. */
+.button.primary, .send-button:not(:disabled) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -10px rgb(196 218 156 / 0.55);
+}
+.button.primary:disabled, .send-button:disabled { box-shadow: none; }
+
+/* Sessions that wait on the user carry an amber edge wherever they appear. */
+.session-card:has(.status.attention) {
+  border-color: rgb(227 188 123 / 0.35);
+  box-shadow: inset 3px 0 0 var(--amber), var(--elev-1);
+}
+.summary-card.selected { box-shadow: inset 0 0 0 1px rgb(196 218 156 / 0.35), var(--elev-2); }
+.summary-card.amber.selected { box-shadow: inset 0 0 0 1px rgb(227 188 123 / 0.45), var(--elev-2); }
+
+/* Live indicator: a ring that breathes only while a turn is running. */
+.status.working i { position: relative; box-shadow: none; }
+.status.working i::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: live-ring 2.2s var(--ease-out) infinite;
+}
+@keyframes live-ring {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  70%, 100% { transform: scale(2); opacity: 0; }
+}
+.unread-dot { box-shadow: 0 0 0 3px rgb(213 188 131 / 0.12); }
+
+/* The one orchestrated moment: a page settles in as one short stagger. */
+@keyframes settle {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.page > * { animation: settle 420ms var(--ease-out) both; }
+.page > *:nth-child(2) { animation-delay: 40ms; }
+.page > *:nth-child(3) { animation-delay: 80ms; }
+.page > *:nth-child(4) { animation-delay: 120ms; }
+.page > *:nth-child(5) { animation-delay: 160ms; }
+.page > *:nth-child(n + 6) { animation-delay: 200ms; }
+.session-grid > .session-card { animation: settle 360ms var(--ease-out) both; }
+.session-grid > .session-card:nth-child(2) { animation-delay: 30ms; }
+.session-grid > .session-card:nth-child(3) { animation-delay: 60ms; }
+.session-grid > .session-card:nth-child(4) { animation-delay: 90ms; }
+.session-grid > .session-card:nth-child(n + 5) { animation-delay: 120ms; }
+
+/* Conversation: new messages arrive, they do not pop. */
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.message, .tool-message, .reply-progress { animation: arrive 260ms var(--ease-out) both; }
+.message.user {
+  border-color: rgb(196 218 156 / 0.14);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+}
+
+/* Overlays: dialogs grow from slightly smaller, sheets rise from the edge. */
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.dialog[open] {
+  animation: dialog-in 240ms var(--ease-out);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--elev-3);
+}
+.dialog[open]::backdrop { animation: fade-in 200ms var(--ease-out); }
+.attachment-menu[open], .voice-recording-sheet[open] { animation: sheet-in 320ms var(--ease-drawer); box-shadow: var(--elev-3); }
+.chat-tool-panel, .filters.open .filter-selects, details[open] > :not(summary) { animation: fade-in 180ms var(--ease-out); }
+.jump-to-latest { animation: dialog-in 200ms var(--ease-out); }
+
+/* Notices: same family, quieter edges. */
+.notice { border-radius: 12px; border-color: var(--hairline); }
+.notice.warning { border-color: rgb(227 188 123 / 0.28); }
+.empty { border-style: solid; border-color: var(--hairline); background: rgb(21 32 26 / 0.35); }
+
+/* Chrome: glass header and tab bar, lighter blur so scrolling stays smooth. */
+.app-header { border-bottom-color: var(--hairline); }
+.nav-item.active { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04); }
+@media (max-width: 760px) {
+  .app-header {
+    background: rgb(15 23 20 / 0.8);
+    backdrop-filter: saturate(150%) blur(12px);
+    -webkit-backdrop-filter: saturate(150%) blur(12px);
+  }
+  .mobile-nav {
+    background: rgb(18 28 23 / 0.82);
+    border-top-color: var(--hairline);
+    backdrop-filter: saturate(150%) blur(12px);
+    -webkit-backdrop-filter: saturate(150%) blur(12px);
+  }
+  .mobile-nav .nav-item svg { transition: transform 220ms var(--ease-out); }
+  .mobile-nav .nav-item.active svg { transform: translateY(-1px); }
+  .page > * { animation-duration: 360ms; }
+}
+
+/* Login is the one place with a brand moment. */
+.login-card { animation: settle 520ms var(--ease-out) both; }
+
+/* Links styled as buttons keep button typography. */
+a.button, a.button:hover { text-decoration: none; }
+
+/* Login disclosures read as rows you can open, not as stray text. */
+.login-card details { border-top: 1px solid var(--hairline); }
+.login-card details:last-of-type { border-bottom: 1px solid var(--hairline); }
+.login-card details > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  color: #b9cbb0;
+  font-size: 14px;
+  cursor: pointer;
+}
+.login-card details > summary::-webkit-details-marker { display: none; }
+.login-card details > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 200ms var(--ease-out);
+}
+.login-card details[open] > summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+.login-card details > :not(summary) { padding-bottom: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+  .status.working i::after { display: none; }
+}
+
+/* Skeletons: same shape as the content they stand in for, a soft opacity
+   pulse (no layout animation), static under reduced motion. */
+.skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: 6px;
+  background: rgb(196 218 156 / 0.08);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+.skeleton-line.short { width: 22%; height: 8px; margin-bottom: 12px; }
+.skeleton-line.title { height: 14px; margin: 16px 0 12px; }
+.skeleton-line + .skeleton-line { margin-top: 10px; }
+.skeleton-card { pointer-events: none; }
+.skeleton-card .session-card-top .skeleton-line + .skeleton-line { margin-top: 0; }
+.transcript-skeleton { display: grid; gap: 26px; padding-top: 8px; }
+.skeleton-message.user { margin-left: 24%; padding: 14px 16px; border-radius: 16px; background: rgb(38 54 45 / 0.5); }
+.skeleton-message.user .skeleton-line { margin-left: auto; }
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.session-grid[aria-busy="true"] > .session-card:nth-child(2) .skeleton-line { animation-delay: 120ms; }
+.session-grid[aria-busy="true"] > .session-card:nth-child(3) .skeleton-line { animation-delay: 240ms; }
+
+/* The live ring needs room outside the dot; status labels are short. */
+.session-card-top .status { overflow: visible; }
+
+/* Tables scroll sideways rather than crushing columns until identifiers
+   break mid-word; long prose cells still wrap at a readable width. */
+.markdown-table { border-color: var(--hairline-strong); border-radius: 10px; -webkit-overflow-scrolling: touch; }
+.markdown-table table { width: max-content; min-width: 100%; }
+.markdown-table th, .markdown-table td { max-width: 18em; vertical-align: top; border-color: rgb(196 218 156 / 0.14); }
+.markdown-table td code { white-space: nowrap; }
+
+.language-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.language-options .button { min-width: 96px; min-height: 44px; }
+.language-options .button.selected { background: rgb(196 218 156 / 0.12); }
+
+@media (max-width: 760px) {
+  .workspace-note { font-size: 11px; }
+  .workspace-note > span:last-child { display: inline-block; }
+}
+
+/* Mobile conversation: reading space first. The header and the composer's
+   tool row together took ~500px of an 844px screen. */
+@media (max-width: 760px) {
+  /* Never set padding-top here: style.css keeps the header below the iOS
+     status bar (safe-area inset, at least 44px in standalone mode). Taps in
+     the status bar go to the system, so a button there does nothing. */
+  .conversation-header { padding-right: 8px; padding-bottom: 0; padding-left: 4px; gap: 4px; align-items: center; }
+  /* Icon-only back; the accessible name stays "返回上一页". */
+  .conversation-header .back-button { font-size: 0; gap: 0; min-width: 48px; width: 48px; min-height: 48px; padding: 0; border: 0; border-radius: 12px; }
+  .conversation-header .back-button svg { width: 24px; height: 24px; }
+  .conversation-heading { min-width: 0; flex: 1; }
+  .conversation-heading h1 { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conversation-heading > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conversation-info { padding: 0 16px 8px 52px; gap: 10px; }
+  .conversation-info .provider svg { width: 16px; height: 16px; }
+  /* Online is the normal case; only an offline device needs a word. */
+  .conversation-info .device-state.online { display: none; }
+  /* Keep controls stable across editor blur: changing their height during a
+     tap can move Send before the browser dispatches click. */
+  .chat-tool-row { padding-top: 4px; }
+  .chat-tool-button { border-color: transparent; background: rgb(196 218 156 / 0.05); }
+}
+/* Consecutive replies from the same sender: one label per block. */
+.message.continued { margin-top: -10px; }
+.message.continued > .message-label { display: none; }
+.message.user.continued { margin-top: -14px; }
+.composer textarea:focus { box-shadow: none; }
+.conversation-controls > .button-row { align-items: center; }
+
+/* Checkboxes and radios: native controls in the accent colour, not text
+   fields (the global input rules gave them padding, borders and 16px type). */
+input[type="checkbox"], input[type="radio"] {
+  width: 20px; height: 20px; min-width: 20px; padding: 0; margin: 0;
+  border: 0; box-shadow: none; accent-color: var(--sage); vertical-align: middle;
+  font-size: inherit !important;
+}
+label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer;
+}
+/* The session menu scrolls; show its edge instead of cutting a line in half. */
+.session-details { border-bottom: 1px solid var(--hairline-strong); box-shadow: 0 12px 24px -12px rgb(0 0 0 / 0.6); }
+
+/* Mobile overview: one scrolling row for project chips and project links;
+   the dropdown already names the current view, so its heading goes. */
+@media (max-width: 760px) {
+  .project-scope-bar {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px;
+    margin: 0 -19px 14px; padding: 0 19px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+  }
+  .project-scope-bar::-webkit-scrollbar { display: none; }
+  .project-scope-bar .project-chips { display: contents; }
+  .project-scope-bar button { flex-shrink: 0; white-space: nowrap; min-height: 40px; }
+  .project-scope-bar > .text-button {
+    padding: 0 12px; border: 1px dashed var(--hairline-strong); border-radius: 8px; font-size: 13px;
+  }
+  .overview .section-heading h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .overview .section-heading { justify-content: flex-start; }
+  .overview .section-heading select { max-width: none; width: 100%; }
+}
+
+/* New chat on phones: the create button stays reachable above the tab bar
+   instead of sitting at the end of a long form. */
+@media (max-width: 760px) {
+  .creation-form .create-submit {
+    position: sticky;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    z-index: 4;
+    min-height: 48px;
+    font-size: 15px;
+    box-shadow: 0 -10px 24px -6px rgb(15 23 20 / 0.9), inset 0 1px 0 rgb(255 255 255 / 0.35), 0 8px 20px -10px rgb(196 218 156 / 0.55);
+  }
+  .page-heading > div { flex: 1 1 200px; min-width: 0; }
+  .page-heading > .button { flex-shrink: 0; }
+}
+/* clip keeps the rounded corners without becoming a scroll container,
+   so the sticky create button can follow the viewport. */
+.creation-form { overflow: clip; }
+/* Top bar on phones: icon-only Back like the conversation; none on pages
+   that are tabs in the bottom bar. */
+@media (max-width: 760px) {
+  .app-header .back-button { font-size: 0; gap: 0; width: 44px; min-width: 44px; padding: 0; border: 0; margin-left: -10px; }
+  .app-header .back-button svg { width: 24px; height: 24px; }
+  .app-header .back-button.tab-destination { display: none; }
+}
+/* A floating button must stay opaque even when disabled. */
+.creation-form .create-submit:disabled { opacity: 1; background: #26342b; border-color: #26342b; color: #7f9984; }
+
+/* Terminal sheet: the native screen fills the middle and stays pinned to its
+   newest lines; recognised menu options become big rows; a D-pad key bar sits
+   under the thumb so a key press never needs a scroll to see its effect. */
+.dialog.terminal-dialog { width: min(760px, 100%); max-width: none; height: min(100dvh, 920px); max-height: none; padding: 0; display: flex; }
+.terminal-dialog .dialog-content {
+  display: flex; flex-direction: column; gap: 10px; width: 100%; min-height: 0;
+  padding: 14px 14px max(14px, env(safe-area-inset-bottom));
+}
+.terminal-dialog .dialog-content > .section-heading { margin: 0; }
+.terminal-dialog .terminal-screen { flex: 1 1 auto; min-height: 120px; max-height: none; margin: 0; overscroll-behavior: contain; }
+.terminal-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; font-size: 12px; color: var(--muted); }
+.terminal-status.warning { color: #e6c89a; }
+.terminal-menu { display: grid; gap: 6px; max-height: 34dvh; overflow-y: auto; overscroll-behavior: contain; }
+.terminal-option {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 12px;
+  text-align: left; border: 1px solid var(--hairline-strong); border-radius: 12px; background: var(--moss);
+  color: var(--text); font-size: 14px; line-height: 1.4;
+}
+.terminal-option.selected { border-color: var(--sage); background: rgb(196 218 156 / 0.12); box-shadow: inset 3px 0 0 var(--sage); }
+.terminal-option-number { flex-shrink: 0; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px; background: rgb(196 218 156 / 0.1); color: var(--sage); font-size: 12px; font-variant-numeric: tabular-nums; }
+.terminal-option-check { flex-shrink: 0; width: 18px; height: 18px; display: grid; place-items: center; border: 1.5px solid var(--hairline-strong); border-radius: 5px; color: var(--sage); font-size: 12px; }
+.terminal-option-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.terminal-option-hint { flex-shrink: 0; max-width: 40%; font-size: 12px; color: var(--sage); }
+.terminal-compose { display: flex; gap: 8px; }
+.terminal-compose input { flex: 1; min-width: 0; min-height: 44px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.terminal-compose .button { min-height: 44px; }
+.terminal-keybar {
+  display: grid; gap: 6px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-areas: "esc tab . up . enter" "more more left down right enter";
+}
+.terminal-key {
+  min-height: 48px; border-radius: 12px; border: 1px solid var(--hairline-strong);
+  background: #1f2c25; color: var(--text); font-size: 16px; font-weight: 500;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.04);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: transform 120ms var(--ease-out), background-color 120ms var(--ease-out);
+}
+.terminal-key:active:not(:disabled) { transform: scale(0.94); background: #2b3b31; }
+.terminal-key[data-key="Esc"] { grid-area: esc; font-size: 13px; }
+.terminal-key[data-key="Tab"] { grid-area: tab; font-size: 13px; }
+.terminal-key[data-key="↑"] { grid-area: up; }
+.terminal-key[data-key="↓"] { grid-area: down; }
+.terminal-key[data-key="←"] { grid-area: left; }
+.terminal-key[data-key="→"] { grid-area: right; }
+.terminal-key.more { grid-area: more; font-size: 18px; color: var(--muted); }
+.terminal-key.enter { grid-area: enter; font-size: 22px; background: var(--sage); color: #182219; border-color: var(--sage); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -8px rgb(196 218 156 / 0.6); }
+.terminal-key.enter:disabled { opacity: 1; background: #26342b; border-color: #26342b; color: #7f9984; box-shadow: none; }
+.terminal-more { display: flex; gap: 8px; flex-wrap: wrap; }
+.terminal-dialog .terminal-advanced { margin: 0; }
+@media (max-width: 760px) {
+  .dialog.terminal-dialog { width: 100%; height: 100dvh; margin: 0; border-radius: 0; border: 0; }
+  .terminal-dialog .dialog-content { padding-top: max(12px, env(safe-area-inset-top)); }
+  .terminal-dialog .terminal-screen { font-size: 11px; line-height: 1.5; }
+}
+/* Same rule as the conversation header: in the iOS home-screen app the inset
+   can read 0 at launch, and taps in the status bar never reach the close button. */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) and (max-width: 760px) and (orientation: portrait) {
+    .terminal-dialog .dialog-content { padding-top: max(44px, env(safe-area-inset-top)); }
+  }
+}
+
+/* Notification setup remains readable in both languages on narrow phones. */
+.push-settings .section-heading { flex-wrap: wrap; gap: 8px; }
+.push-settings .pill { white-space: normal; }
+.push-settings .button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.push-settings .button { min-height: 44px; white-space: normal; }
+.push-settings p { overflow-wrap: anywhere; }
+
+/* A full-width writing surface, with one quiet toolbar below it. */
+.conversation-controls .composer {
+  grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
+  grid-template-rows: auto auto auto;
+  column-gap: 4px; row-gap: 0;
+  padding: 10px 10px 6px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 22px;
+  background: #1d2924;
+  box-shadow: var(--elev-1);
+  transition: none;
+}
+.conversation-controls .composer:focus-within {
+  border-color: rgb(196 218 156 / 0.32);
+  box-shadow: var(--elev-1);
+}
+.conversation-controls .composer textarea {
+  grid-column: 1 / -1; grid-row: 2;
+  min-height: 44px; max-height: 120px;
+  width: 100%; padding: 7px 6px 11px;
+  font-size: 17px; line-height: 26px;
+  border-radius: 0;
+  color: var(--text);
+}
+.conversation-controls .composer textarea::placeholder { color: #99aaa1; }
+.conversation-controls .composer .pending-attachments { grid-row: 1; }
+.conversation-controls .composer-attachments { grid-column: 1; grid-row: 3; }
+.conversation-controls .composer .voice-input { grid-column: 3; grid-row: 3; }
+.conversation-controls .composer .composer-bottom { grid-column: 4; grid-row: 3; }
+.conversation-controls .composer .voice-button { width: 44px; height: 44px; }
+.conversation-controls .composer .send-button { width: 44px; height: 44px; min-width: 44px; border-radius: 15px; }
+.conversation-controls .composer .send-button:disabled { background: #344239; color: #96a69a; opacity: 1; }
+.draft-summary { grid-column: 2; grid-row: 3; display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
+.draft-summary .small { display: none; }
+.draft-summary .text-button { min-height: 44px; font-size: 12px; }
+.composer-tool-dialog .chat-tool-panel { border: 0; margin: 0; padding: 0; max-height: none; }
+.composer-tool-dialog .execution-actions { flex-wrap: wrap; }
+.full-draft-input { width: 100%; min-height: 45dvh; font-size: 16px; }
+.connection-recovery { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 12px 8px; padding: 0 10px; border: 1px solid var(--hairline-strong); border-radius: 12px; color: var(--amber); font-size: 12px; flex-shrink: 0; }
+.connection-recovery button { flex-shrink: 0; min-height: 44px; font-size: 12px; }
+@media (max-width: 760px) {
+  .conversation-controls { border-top: 0; padding-left: 10px; padding-right: 10px; padding-top: 6px; }
+  .conversation .app-body.keyboard-open { position: fixed; top: var(--keyboard-top); left: 0; right: 0; height: var(--keyboard-height); overflow: hidden; }
+  .keyboard-open .conversation-controls { padding-bottom: 6px; max-height: 60%; }
+  .conversation-controls .chat-tool-row { padding: 0 0 6px; }
+  .conversation-controls.is-writing .chat-tool-row,
+  .keyboard-open .chat-tool-row { display: none; }
+  .keyboard-open .composer textarea { max-height: min(120px, calc(var(--keyboard-height) / 3)); }
+  .conversation-controls .composer.compact { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; padding: 6px; }
+  .conversation-controls .composer.compact textarea { grid-column: 2; grid-row: 2; padding: 9px 2px; }
+  .conversation-controls .composer.compact .composer-attachments { grid-row: 2; }
+  .conversation-controls .composer.compact .voice-input { grid-column: 3; grid-row: 2; }
+  .conversation-controls .composer.compact .composer-bottom { grid-column: 4; grid-row: 2; }
+  .conversation-controls .composer.compact.has-draft { grid-template-columns: 44px minmax(0, 1fr) 44px 44px 44px; }
+  .conversation-controls .composer.compact.has-draft .voice-input { grid-column: 4; }
+  .conversation-controls .composer.compact.has-draft .composer-bottom { grid-column: 5; }
+  .composer.compact .draft-summary { grid-column: 3; grid-row: 2; }
+  .composer.compact .draft-summary .text-button { width: 44px; padding: 0; font-size: 0; }
+  .composer.compact .draft-summary .text-button::after { content: "↗"; font-size: 22px; }
+  .composer-tool-dialog { inset: auto 0 0; width: 100%; max-width: 100%; margin: 0; max-height: min(75dvh, var(--keyboard-height, 75dvh)); border-radius: 24px 24px 0 0; }
+  .composer-tool-dialog .dialog-content { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .draft-dialog { position: fixed; inset: 0; width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+  .keyboard-open .draft-dialog { top: var(--keyboard-top); bottom: auto; height: var(--keyboard-height); max-height: var(--keyboard-height); }
+  .draft-dialog .dialog-content { height: 100%; display: flex; flex-direction: column; gap: 8px; padding-top: max(16px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .draft-dialog .section-heading, .draft-dialog .button-row { flex-shrink: 0; }
+  .draft-dialog .full-draft-input { flex: 1; min-height: 0; resize: none; }
+  .keyboard-open .draft-dialog .dialog-content { padding-bottom: 6px; }
+}
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) and (max-width: 760px) {
+    .draft-dialog .dialog-content { padding-top: max(44px, env(safe-area-inset-top)); }
+  }
+}
+
+/* Attachment choices sit on a single bottom sheet, separate from session tools. */
+.attachment-menu.attachment-sheet {
+  inset: auto 0 0;
+  width: min(520px, 100%);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 8px 20px max(20px, env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: 24px 24px 0 0;
+  background: var(--attachment-surface);
+  color: var(--text);
+  box-shadow: var(--elev-3);
+}
+.attachment-sheet::backdrop { background: rgb(0 0 0 / 0.38); }
+.attachment-sheet .attachment-sheet-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 52px; margin-bottom: 12px;
+}
+.attachment-sheet-heading strong { font-size: 16px; font-weight: 600; }
+.attachment-sheet .attachment-sheet-close {
+  display: grid; place-items: center; flex: 0 0 44px;
+  width: 44px; height: 44px; margin: 0 -8px 0 0; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--muted);
+}
+.attachment-sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.attachment-sheet .attachment-sources button {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  min-width: 0; min-height: 92px; margin: 0; padding: 4px 0;
+  border: 0; border-radius: 16px; background: transparent; color: var(--text);
+  font-size: 13px; line-height: 1.4; text-align: center;
+  transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+.attachment-source-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: var(--attachment-icon); }
+.attachment-sheet button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.attachment-sheet button:active:not(:disabled) { transform: scale(0.96); }
+.attachment-sheet .attachment-sources button:disabled { opacity: .4; }
+.attachment-sheet small { margin-top: 16px; padding: 0; color: var(--muted); font-size: 12px; text-align: center; }
+@media (hover: hover) and (pointer: fine) {
+  .attachment-sheet button:hover:not(:disabled) { background: var(--hairline); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .attachment-sheet .attachment-sources button { transition: none; }
+}
+
+.terminal-disconnected { font-size: 12px; }
+.terminal-disconnected .button { min-height: 44px; }

@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "Pocket Agents",
+  "short_name": "Pocket",
+  "description": "随时连接你的原生 Agent 会话",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101817",
+  "theme_color": "#101817",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
