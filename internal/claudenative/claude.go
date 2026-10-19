@@ -780,8 +780,13 @@ func (p *Provider) start(ctx context.Context, a core.Action) (core.Result, error
 		if e != nil {
 			return r, e
 		}
-		if meta.Cwd != "" && meta.Cwd != cwd {
-			return r, errors.New("resume must use the existing native working directory")
+		if meta.Cwd != "" {
+			// Transcript metadata may retain a pre-migration symlink path.
+			// Resolve both sides, but never allow an unrelated workspace.
+			nativeCwd, err := validDirectory(meta.Cwd)
+			if err != nil || nativeCwd != cwd {
+				return r, errors.New("resume must use the existing native working directory")
+			}
 		}
 		agents, e := p.agents(ctx)
 		if e != nil {
