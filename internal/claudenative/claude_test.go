@@ -393,3 +393,41 @@ func TestStartupStyledAcknowledgementAndLostController(t *testing.T) {
 		t.Fatalf("expired launcher must not expose stale input controls: %+v %v", r, e)
 	}
 }
+
+func TestBlockedWithoutNativeQuestionDoesNotAskForApproval(t *testing.T) {
+	for _, tc := range []struct{ status, waiting, want string }{
+		{"", "", "unknown"},
+		{"idle", "", "unknown"},
+		{"waiting", "input needed", "waiting_input"},
+		{"", "input needed", "waiting_input"},
+		{"waiting", "permission prompt", "waiting_approval"},
+		{"", "sandbox permission", "waiting_approval"},
+		{"busy", "", "working"},
+	} {
+		s := core.Session{}
+		applyAgent(&s, agent{Kind: "background", PID: os.Getpid(), State: "blocked", Status: tc.status, WaitingFor: tc.waiting})
+		if s.TurnState != tc.want {
+			t.Fatalf("%+v: got %s", tc, s.TurnState)
+		}
+	}
+}
+
+func TestHistoryLookupDistinguishesMissingAndDuplicateRecords(t *testing.T) {
+	p := &Provider{profile: core.Profile{Home: t.TempDir()}}
+	id := "00000000-0000-0000-0000-000000000001"
+	if _, err := p.findPath(id); err == nil || !strings.Contains(err.Error(), "No native conversation history") {
+		t.Fatalf("missing history: %v", err)
+	}
+	for _, project := range []string{"first", "second"} {
+		dir := filepath.Join(p.profile.Home, "projects", project)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, id+".jsonl"), []byte("{}\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if path, err := p.findPath(id); err == nil || path != "" || !strings.Contains(err.Error(), "Multiple native conversation records") {
+		t.Fatalf("ambiguous history selected: %q %v", path, err)
+	}
+}

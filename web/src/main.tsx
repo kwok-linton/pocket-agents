@@ -1733,7 +1733,7 @@ function Conversation({
   const capability = session.capabilities;
   const nativeFailure = initialized.current && !isWorking(session) ? latestApiFailure(history.messages) : null;
   const nativeAttention = !nativeFailure && needsAttention(session) && !(session.pending?.length);
-  const permissionNotice = !nativeFailure && session.error?.includes("open native terminal");
+  const permissionNotice = !nativeFailure && session.turnState === "waiting_approval" && session.error?.includes("open native terminal");
   useEffect(() => {
     writeLocal(`draft:${session.id}`, draft);
   }, [session.id, draft]);
@@ -2091,7 +2091,7 @@ function Conversation({
           )}
           {error && (
             <div className="notice warning" role="alert">
-              {error.includes('no rollout found') ? t("这条会话尚无已保存的原生聊天记录。") : t("历史读取暂未完成：{0}", { 0: error })}
+              {error.includes('no rollout found') ? t("这条会话尚无已保存的原生聊天记录。") : t("历史读取暂未完成：{0}", { 0: tServer(error) })}
             </div>
           )}
           {!initialized.current && !!history.messages.length && <p className="field-hint" role="status">{t("先显示上次查看的内容，正在核对最新原生记录…")}</p>}
@@ -2182,9 +2182,9 @@ function Conversation({
           <button type="button" className="button" disabled={busy || !device?.online} title={t("填入继续对话的草稿，确认后发送")} onClick={() => { setDraft(current => current || t("请继续刚才未完成的任务。")); draftInput.current?.focus(); }}>{t("继续对话")}<Icon name="chevron" size={16} /></button>
         </div>}
         {(nativeAttention || permissionNotice) && <section className="native-attention" aria-label={t("需要你的确认")}>
-          <div><strong>{session.turnState === "waiting_approval" || permissionNotice ? t("Claude 正在等待你的批准") : t("会话正在等待你的回答")}</strong>
-          <p>{capability.terminal ? t("打开请求，查看内容后选择允许或拒绝，即可继续任务。") : t("当前连接无法在手机处理，请在这台设备的原生终端中确认。")}</p></div>
-          {capability.terminal && <button className="button primary" disabled={busy || !device?.online} onClick={() => execute({...target, kind:"terminal"})}>{busy ? t("正在打开…") : t("查看并处理")}</button>}
+          <div><strong>{session.turnState === "waiting_approval" || permissionNotice ? t("会话正在等待你的批准") : t("会话正在等待你的回答")}</strong>
+          <p>{capability.terminal ? (session.turnState === "waiting_approval" || permissionNotice ? t("打开请求，查看内容后选择允许或拒绝，即可继续任务。") : t("查看具体问题，再按提示输入回答或选择选项。")) : t("当前连接无法在手机处理，请在这台设备的原生终端中确认。")}</p></div>
+          {capability.terminal && <button className="button primary" disabled={busy || !device?.online} onClick={() => execute({...target, kind:"terminal"})}>{busy ? t("正在打开…") : session.turnState === "waiting_approval" || permissionNotice ? t("查看并处理") : t("查看问题")}</button>}
           {!device?.online && <small>{t("设备暂时离线，重新连接后可处理。")}</small>}
         </section>}
         {session.error && !permissionNotice && !nativeFailure && <div className="notice warning">{tServer(session.error)}</div>}

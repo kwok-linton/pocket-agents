@@ -191,7 +191,9 @@ func applyAgent(s *core.Session, a agent) {
 	case "working":
 		s.TurnState = "working"
 	case "blocked":
-		s.TurnState = "waiting_input"
+		// Blocked alone can mean startup failure or an unavailable transcript.
+		// Only an explicit native wait establishes a question or approval.
+		s.TurnState = "unknown"
 	case "done":
 		s.TurnState = "completed"
 	case "failed":
@@ -202,7 +204,7 @@ func applyAgent(s *core.Session, a agent) {
 	if a.Status == "busy" {
 		s.TurnState = "working"
 	}
-	if a.Status == "waiting" {
+	if a.Status == "waiting" || (a.State == "blocked" && a.WaitingFor != "") {
 		s.TurnState = "waiting_input"
 		if strings.Contains(a.WaitingFor, "permission") || strings.Contains(a.WaitingFor, "sandbox") {
 			s.TurnState = "waiting_approval"
@@ -351,8 +353,11 @@ func (p *Provider) findPath(id string) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	if len(paths) != 1 {
-		return "", fmt.Errorf("native transcript absent or ambiguous (%d matches)", len(paths))
+	if len(paths) == 0 {
+		return "", errors.New("No native conversation history was found. Check the native terminal for startup prompts.")
+	}
+	if len(paths) > 1 {
+		return "", errors.New("Multiple native conversation records match this session. Cannot safely choose a history file.")
 	}
 	return paths[0], nil
 }

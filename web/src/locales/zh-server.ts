@@ -1,6 +1,9 @@
 // English text sent by the backend -> Chinese, used by tServer(). Keys that
 // end in ": " match as prefixes (a technical detail follows).
 export const zhFromServer: Record<string, string> = {
+  "No native conversation history was found. Check the native terminal for startup prompts.": "未找到这条会话的原生聊天记录。请打开原生终端，检查是否停在启动提示。",
+  "Multiple native conversation records match this session. Cannot safely choose a history file.": "发现多份匹配的原生记录，暂时无法确定应读取哪一份。",
+  "native transcript absent or ambiguous (0 matches)": "未找到这条会话的原生聊天记录。请打开原生终端，检查是否停在启动提示。",
   "Terminal connection ended or changed; reconnect explicitly before sending.": "终端连接已断开或改变，请重新连接后再发送。",
   "Native stop is unconfirmed; inspect the session before retrying.": "尚未确认原生实例已结束；请检查会话状态后再决定是否重试。",
   "The original native execution has exited; conversation history is retained.": "原实例已退出，对话历史保留。",
