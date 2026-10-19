@@ -3,7 +3,7 @@ import { SessionRename } from "./session-rename";
 import { followKeyboard } from "./keyboard-viewport";
 import { watchActionResults } from "./action-recovery";
 import { pushEnvironment, syncPushRegistration } from "./push-registration";
-import { affectsSession } from "./history-sync";
+import { affectsSession, hasVisibleMessages, withVisibleHistory } from "./history-sync";
 import { loadView } from "./view-data";
 import { readLoop } from "./read-loop";
 import { eventConnection } from "./event-connection";
@@ -1742,7 +1742,9 @@ function Conversation({
     let last: History | undefined;
     const loop = readLoop((signal) => api<History>(
       latestHistoryPath(session.id), {signal},
-    )
+    ).then(value => withVisibleHistory(value, cursor => api<History>(
+      `/api/sessions/${encodeURIComponent(session.id)}/history?cursor=${encodeURIComponent(cursor)}&limit=60`, {signal},
+    )))
       .then((value) => {
         if (stale || signal.aborted) return;
         if (value === last) {
@@ -2116,7 +2118,7 @@ function Conversation({
             // Keys are message ids: group positions shift when older pages
             // are prepended, which would remount and re-parse every message.
             transcriptGroups(history.messages).map((group) =>
-              group.internal ? (showInternal &&
+              group.internal ? ((showInternal || !hasVisibleMessages(history.messages)) &&
                 <details
                   className="tool-message"
                   key={`internal:${group.messages[0].id}`}
