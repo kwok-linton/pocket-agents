@@ -103,7 +103,7 @@ export function matchesOverviewFilter(session: Session, filter: string) {
 // In the active view a session waiting on the user stops updating, so a plain
 // newest-first sort lets busy sessions push it out of sight.
 const urgency = (s: Session) =>
-  needsAttention(s) ? 0 : s.turnState === "error" ? 1 : isFinished(s) && unread(s) ? 2 : 3;
+  needsAttention(s) ? 0 : s.turnState === "error" ? 1 : isWorking(s) ? 2 : isFinished(s) && unread(s) ? 3 : 4;
 export function sortSessions(list: Session[], attentionFirst: boolean) {
   const at = new Map(list.map((s) => [s, Date.parse(s.updatedAt) || 0]));
   const rank = new Map(list.map((s) => [s, attentionFirst ? urgency(s) : 0]));

@@ -68,7 +68,7 @@ test("active view lists sessions waiting on the user before busier ones", () => 
     s("unread done", "completed", "2026-10-18T09:40:00Z", "2026-10-18T09:00:00Z"),
     s("read done", "completed", "2026-10-18T10:00:00Z"),
   ];
-  assert.deepEqual(sortSessions(list, true).map((x) => x.title), ["approval", "failed", "unread done", "working", "read done"]);
+  assert.deepEqual(sortSessions(list, true).map((x) => x.title), ["approval", "failed", "working", "unread done", "read done"]);
   assert.deepEqual(sortSessions(list, false).map((x) => x.title), ["working", "read done", "unread done", "failed", "approval"]);
   assert.equal(list[0].title, "working", "input order is not mutated");
 });
@@ -100,4 +100,19 @@ test("background counts respect the same selection as the session list", () => {
   const s = {title: "Monitor", provider: "claude", nodeId: "a", cwd: "/project", executionState: "alive", turnState: "background"} as Session;
   const sessions = [s, {...s, nodeId: "b"}, {...s, provider: "codex"}, {...s, title: "Build"}];
   assert.equal(overviewCounts(sessions.filter(s => matchesOverviewSelection(s, view))).background, 1);
+});
+
+
+test("working sessions stay together ahead of newer unread completions and idle sessions", () => {
+  const session = (id: string, turnState: string, minute: number) => ({
+    id, turnState, executionState: "alive", updatedAt: `2026-10-20T10:${minute}:00Z`,
+    metadata: { readAt: "2026-10-20T09:00:00Z" },
+  }) as Session;
+  const list = [session("done", "completed", 59), session("idle", "idle", 58),
+    session("older work", "working", 10), session("newer work", "working", 20),
+    session("question", "waiting_input", 11)];
+  assert.deepEqual(sortSessions(list, true).map(s => s.id),
+    ["question", "newer work", "older work", "done", "idle"]);
+  assert.deepEqual(sortSessions(list, false).map(s => s.id),
+    ["done", "idle", "newer work", "question", "older work"]);
 });

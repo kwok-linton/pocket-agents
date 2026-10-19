@@ -1391,11 +1391,11 @@ function Overview({
             tone: "amber",
           },
           {
-            id: "history",
-            label: t("历史会话"),
-            value: counts.history,
-            hint: t("选择原生记录，按需恢复"),
-            tone: "gray",
+            id: "working",
+            label: t("正在工作"),
+            value: counts.working,
+            hint: t("Agent 正在处理"),
+            tone: "green",
           },
         ].map((item) => (
           <button

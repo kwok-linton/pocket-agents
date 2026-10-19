@@ -657,7 +657,6 @@ export const en: Record<string, string> = {
   "选择一个项目，查看历史会话": "Choose a project to see past sessions",
   "选择历史会话": "Choose a past session",
   "选择历史，继续对话": "Pick from history to continue",
-  "选择原生记录，按需恢复": "Pick a native record to resume",
   "选择工作目录": "Choose working directory",
   "选择文件": "Choose file",
   "选择日常关注的工作目录，发现的其他目录不会自动加入。": "Choose the working directories you follow day to day. Other discovered directories are not added automatically.",
