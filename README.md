@@ -140,6 +140,6 @@ Pocket Agents is **source-available, not OSI-approved open source**. Original co
 
 The full license defines the exact permissions and exceptions. Existing grants under earlier licenses are not retroactively revoked. Dependency notices are in [THIRD_PARTY.md](THIRD_PARTY.md).
 
-## Author
+## Authors
 
-Created by [Ronnie Lintao Guo](https://github.com/kwok-linton), from a daily need to keep working with coding agents away from the desk.
+Created by [Ronnie Lintao Guo](https://github.com/kwok-linton) and developed together with [Jacob Li](https://github.com/AchillesLiL) (@AchillesLiL), from a daily need to keep working with coding agents away from the desk.

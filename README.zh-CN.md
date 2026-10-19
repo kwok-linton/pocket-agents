@@ -134,4 +134,4 @@ Pocket Agents 是**源码可用软件，不是 OSI 定义的开源软件**。原
 
 ## 作者
 
-由 [Ronnie Lintao Guo](https://github.com/kwok-linton) 创建，源于离开电脑后仍想继续使用 AI 编程工具的日常需求。
+由 [Ronnie Lintao Guo](https://github.com/kwok-linton) 创建，与 [Jacob Li](https://github.com/AchillesLiL)（@AchillesLiL）共同开发，源于离开电脑后仍想继续使用 AI 编程工具的日常需求。

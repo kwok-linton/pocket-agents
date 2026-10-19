@@ -134,4 +134,4 @@ Pocket Agents は**ソース公開型ソフトウェアであり、OSI が定義
 
 ## 作者
 
-[Ronnie Lintao Guo](https://github.com/kwok-linton) が、デスクを離れても AI コーディングツールを使い続けたいという日常のニーズから開発しています。
+[Ronnie Lintao Guo](https://github.com/kwok-linton) が作成し、[Jacob Li](https://github.com/AchillesLiL)（@AchillesLiL）と共同で開発しています。デスクを離れても AI コーディングツールを使い続けたいという日常のニーズから生まれました。
