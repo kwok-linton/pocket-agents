@@ -119,6 +119,10 @@ make check
 - [互換性と制限](docs/COMPATIBILITY.md)
 - [検証チェックリスト](docs/ACCEPTANCE.md)
 
+## コントリビューション
+
+**現在、外部からのコードのプルリクエストは受け付けていません（少なくとも `main` ブランチには取り込みません）。** 不具合の報告、アイデア、質問は [GitHub Issues](https://github.com/kwok-linton/pocket-agents/issues) にお寄せください。詳しくは [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
+
 ## ライセンス
 
 Pocket Agents は**ソース公開型ソフトウェアであり、OSI が定義するオープンソースではありません**。オリジナルコードには [PolyForm Noncommercial 1.0.0](LICENSE) が適用されます。

@@ -119,6 +119,10 @@ make check
 - [兼容性与限制](docs/COMPATIBILITY.md)
 - [验收清单](docs/ACCEPTANCE.md)
 
+## 参与贡献
+
+**暂时不接受外部代码 PR，至少 `main` 分支不接受。** 欢迎通过 [GitHub issue](https://github.com/kwok-linton/pocket-agents/issues) 提交问题反馈、功能建议和使用疑问。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 ## 许可证
 
 Pocket Agents 是**源码可用软件，不是 OSI 定义的开源软件**。原创代码采用 [PolyForm Noncommercial 1.0.0](LICENSE)。

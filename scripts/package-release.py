@@ -5,7 +5,7 @@ import pathlib
 import tarfile
 
 # Deliberate allowlist: never recursively ship operational evidence or diaries.
-public_docs = ('LICENSE', 'THIRD_PARTY.md', 'AGENTS.md', 'README.md', 'README.zh-CN.md',
+public_docs = ('LICENSE', 'THIRD_PARTY.md', 'AGENTS.md', 'CONTRIBUTING.md', 'README.md', 'README.zh-CN.md',
                'README.ja.md', 'docs/INSTALL.md',
                'docs/ARCHITECTURE.md', 'docs/COMPATIBILITY.md',
                'docs/ACCEPTANCE.md', 'docs/DECISIONS.md',

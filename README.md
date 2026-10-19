@@ -127,6 +127,10 @@ Tests use isolated fixtures by default. Real-provider probes are opt-in and may 
 - [Compatibility and limitations](docs/COMPATIBILITY.md)
 - [Validation checklist](docs/ACCEPTANCE.md)
 
+## Contributing
+
+**External code pull requests are not accepted at the moment, at least not into `main`.** Bug reports, ideas and questions are welcome as [GitHub issues](https://github.com/kwok-linton/pocket-agents/issues). See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 Pocket Agents is **source-available, not OSI-approved open source**. Original code is licensed under [PolyForm Noncommercial 1.0.0](LICENSE).
