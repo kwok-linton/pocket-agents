@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { t } from "./i18n";
+import { t, tServer } from "./i18n";
 
 export function SessionRename({ title, onRename }: { title: string; onRename?: (name: string) => Promise<void> }) {
   const [open, setOpen] = useState(false);
@@ -20,7 +20,7 @@ export function SessionRename({ title, onRename }: { title: string; onRename?: (
         if (!name.trim() || saving || !onRename) return;
         setSaving(true); setError("");
         try { await onRename(name.trim()); setOpen(false); }
-        catch { setError(t("尚未确认改名结果，请刷新核对后再操作。")); }
+        catch (err) { setError(tServer((err as Error).message) || t("尚未确认改名结果，请刷新核对后再操作。")); }
         finally { setSaving(false); }
       }}>
         <header><strong>{t("会话改名")}</strong><button type="button" onClick={() => setOpen(false)}>{t("取消")}</button></header>

@@ -128,6 +128,17 @@ func (p *Provider) startupResult(ctx context.Context, s *startup) (core.Result, 
 				if v.ID == match[1] {
 					r.NativeID = v.SessionID
 					r.ExecutionID = executionID(v)
+					if v.State == "failed" && r.ExecutionID == "" {
+						r.Status = "rejected"
+						r.Message = "Native background startup failed before creating conversation history."
+						if detail := p.backgroundFailure(v); detail != "" {
+							r.Message += " " + detail
+						}
+						return r, nil
+					}
+					if r.ExecutionID == "" {
+						continue
+					}
 					r.Status = "accepted"
 					r.Message = "Native workspace dialog completed and native session created."
 					return r, nil

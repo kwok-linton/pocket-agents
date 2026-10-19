@@ -43,7 +43,11 @@ func desktopTerminalSize(ctx context.Context, binary string, a agent) *pty.Winsi
 	if err != nil {
 		return nil
 	}
-	for _, path := range desktopAttachTerminals(string(out), binary, a, os.Getpid()) {
+	return desktopSizeFromProcesses(string(out), binary, a, os.Getpid())
+}
+
+func desktopSizeFromProcesses(processes, binary string, a agent, parent int) *pty.Winsize {
+	for _, path := range desktopAttachTerminals(processes, binary, a, parent) {
 		f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NOCTTY, 0)
 		if err != nil {
 			continue
@@ -63,6 +67,9 @@ func (a *attachment) resize(size *pty.Winsize) error {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if a.dead {
+		return nil
+	}
 	if a.size.Rows == size.Rows && a.size.Cols == size.Cols {
 		return nil
 	}
@@ -71,6 +78,38 @@ func (a *attachment) resize(size *pty.Winsize) error {
 	}
 	a.size = *size
 	return nil
+}
+
+// A background worker shares its renderer between attached clients. A stale
+// phone PTY can keep that renderer wide after the desktop is split in half.
+// Follow the desktop for the lifetime of this client, even when no browser is
+// polling it. Only explicit, live attachments run this loop, not discovered
+// sessions. Do not hold the provider's controller lock during process lookup.
+func (a *attachment) followSize(ctx context.Context, readSize func(context.Context) *pty.Winsize) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		tick := time.NewTicker(500 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			if ctx.Err() != nil || !a.connected() {
+				return
+			}
+			size := readSize(ctx)
+			if ctx.Err() != nil {
+				return
+			}
+			// Missing desktops and transient lookup failures keep the last size;
+			// they must not reset it to the phone default or reconnect a client.
+			_ = a.resize(size)
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+			}
+		}
+	}()
+	return done
 }
 
 func (a *attachment) view() (string, string, int64) {

@@ -2,6 +2,8 @@
 // (and Chinese messages the backend sends). {0} inserts a value;
 // {0|one|many} picks singular/plural. `npm test` fails if a key is missing.
 export const en: Record<string, string> = {
+  "查看具体问题，再按提示输入回答或选择选项。": "Read the question, then enter your answer or choose an option.",
+  "查看问题": "View question",
   "当前实例已退出，历史记录保留。": "This instance has exited. Conversation history is retained.",
   "终端连接已断开或无法确认。重新连接前不会发送按键；后台实例可能仍在运行。": "The terminal is disconnected or its connection is unknown. Reconnect to send keys. The background instance may still be running.",
   "重新连接终端": "Reconnect terminal",
@@ -66,7 +68,7 @@ export const en: Record<string, string> = {
   "Claude 原生目录信任": "Claude native directory trust",
   "Claude 可能按模型或账号限制调整强度；以原生终端显示为准。": "Claude may adjust effort based on model or account limits; the native terminal shows the actual value.",
   "Claude 模型设置": "Claude model settings",
-  "Claude 正在等待你的批准": "Claude is waiting for your approval",
+  "会话正在等待你的批准": "The session is waiting for your approval",
   "Enter 确认当前选项": "Enter to confirm option",
   "Tailscale未安装或命令不可用，请安装并登录": "Tailscale isn't installed or the command isn't available. Install it and sign in",
   "[图片：{0}]": "[Image: {0}]",

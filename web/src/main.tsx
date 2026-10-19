@@ -3,7 +3,7 @@ import { SessionRename } from "./session-rename";
 import { followKeyboard } from "./keyboard-viewport";
 import { watchActionResults } from "./action-recovery";
 import { pushEnvironment, syncPushRegistration } from "./push-registration";
-import { affectsSession } from "./history-sync";
+import { affectsSession, hasVisibleMessages, withVisibleHistory } from "./history-sync";
 import { loadView } from "./view-data";
 import { readLoop } from "./read-loop";
 import { eventConnection } from "./event-connection";
@@ -280,7 +280,7 @@ function ActionStatus({
       // An unconfirmed result blocks new input; show the way out up front.
       open={result.status === "unknown" || undefined}
     >
-      <summary>{operation} · {result.status === "submitted" ? t("等待确认") : result.status === "unknown" ? t("结果待核对") : t("未成功")}<span>{t("查看详情")}</span></summary>
+      <summary>{operation} · {result.status === "submitted" ? t("等待确认") : result.status === "unknown" ? t("结果待核对") : t("未成功")}{result.status === "rejected" && result.message ? `：${tServer(result.message)}` : ""}<span>{t("查看详情")}</span></summary>
       <div>
         <strong>
           {operation} · {
@@ -1733,7 +1733,7 @@ function Conversation({
   const capability = session.capabilities;
   const nativeFailure = initialized.current && !isWorking(session) ? latestApiFailure(history.messages) : null;
   const nativeAttention = !nativeFailure && needsAttention(session) && !(session.pending?.length);
-  const permissionNotice = !nativeFailure && session.error?.includes("open native terminal");
+  const permissionNotice = !nativeFailure && session.turnState === "waiting_approval" && session.error?.includes("open native terminal");
   useEffect(() => {
     writeLocal(`draft:${session.id}`, draft);
   }, [session.id, draft]);
@@ -1742,7 +1742,9 @@ function Conversation({
     let last: History | undefined;
     const loop = readLoop((signal) => api<History>(
       latestHistoryPath(session.id), {signal},
-    )
+    ).then(value => withVisibleHistory(value, cursor => api<History>(
+      `/api/sessions/${encodeURIComponent(session.id)}/history?cursor=${encodeURIComponent(cursor)}&limit=60`, {signal},
+    )))
       .then((value) => {
         if (stale || signal.aborted) return;
         if (value === last) {
@@ -2091,7 +2093,7 @@ function Conversation({
           )}
           {error && (
             <div className="notice warning" role="alert">
-              {error.includes('no rollout found') ? t("这条会话尚无已保存的原生聊天记录。") : t("历史读取暂未完成：{0}", { 0: error })}
+              {error.includes('no rollout found') || error.includes('No native conversation history') ? t("这条会话尚无已保存的原生聊天记录。") : t("历史读取暂未完成：{0}", { 0: tServer(error) })}
             </div>
           )}
           {!initialized.current && !!history.messages.length && <p className="field-hint" role="status">{t("先显示上次查看的内容，正在核对最新原生记录…")}</p>}
@@ -2106,7 +2108,7 @@ function Conversation({
               ))}
             </div>
           ) : error && !history.messages.length ? (
-            error.includes('no rollout found') ?
+            error.includes('no rollout found') || error.includes('No native conversation history') ?
             <Empty title={t("没有已保存的聊天记录")}>{t("这可能是尚未开始对话的空会话。返回列表选择其他会话即可，无需等待重连。")}</Empty> :
             <Empty title={t("暂时无法读取会话")}>{t("请稍后重试；若持续失败，可查看原生客户端中的会话状态。")}</Empty>
           ) : !history.messages.length ? (
@@ -2116,7 +2118,7 @@ function Conversation({
             // Keys are message ids: group positions shift when older pages
             // are prepended, which would remount and re-parse every message.
             transcriptGroups(history.messages).map((group) =>
-              group.internal ? (showInternal &&
+              group.internal ? ((showInternal || !hasVisibleMessages(history.messages)) &&
                 <details
                   className="tool-message"
                   key={`internal:${group.messages[0].id}`}
@@ -2182,9 +2184,9 @@ function Conversation({
           <button type="button" className="button" disabled={busy || !device?.online} title={t("填入继续对话的草稿，确认后发送")} onClick={() => { setDraft(current => current || t("请继续刚才未完成的任务。")); draftInput.current?.focus(); }}>{t("继续对话")}<Icon name="chevron" size={16} /></button>
         </div>}
         {(nativeAttention || permissionNotice) && <section className="native-attention" aria-label={t("需要你的确认")}>
-          <div><strong>{session.turnState === "waiting_approval" || permissionNotice ? t("Claude 正在等待你的批准") : t("会话正在等待你的回答")}</strong>
-          <p>{capability.terminal ? t("打开请求，查看内容后选择允许或拒绝，即可继续任务。") : t("当前连接无法在手机处理，请在这台设备的原生终端中确认。")}</p></div>
-          {capability.terminal && <button className="button primary" disabled={busy || !device?.online} onClick={() => execute({...target, kind:"terminal"})}>{busy ? t("正在打开…") : t("查看并处理")}</button>}
+          <div><strong>{session.turnState === "waiting_approval" || permissionNotice ? t("会话正在等待你的批准") : t("会话正在等待你的回答")}</strong>
+          <p>{capability.terminal ? (session.turnState === "waiting_approval" || permissionNotice ? t("打开请求，查看内容后选择允许或拒绝，即可继续任务。") : t("查看具体问题，再按提示输入回答或选择选项。")) : t("当前连接无法在手机处理，请在这台设备的原生终端中确认。")}</p></div>
+          {capability.terminal && <button className="button primary" disabled={busy || !device?.online} onClick={() => execute({...target, kind:"terminal"})}>{busy ? t("正在打开…") : session.turnState === "waiting_approval" || permissionNotice ? t("查看并处理") : t("查看问题")}</button>}
           {!device?.online && <small>{t("设备暂时离线，重新连接后可处理。")}</small>}
         </section>}
         {session.error && !permissionNotice && !nativeFailure && <div className="notice warning">{tServer(session.error)}</div>}

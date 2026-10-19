@@ -82,3 +82,50 @@ func TestDeleteHistoryScopeAndLiveGuard(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteTranscriptlessBackgroundStopsAndRemovesSupervisorRecord(t *testing.T) {
+	home := t.TempDir()
+	cwd := t.TempDir()
+	id := "11111111-2222-3333-4444-555555555555"
+	agentJSON, _ := json.Marshal([]map[string]any{{
+		"id": "deadbeef", "sessionId": id, "cwd": cwd, "kind": "background", "state": "working", "pid": os.Getpid(),
+	}})
+	bin := filepath.Join(home, "claude")
+	script := `#!/bin/sh
+if [ "$1" = stop ]; then
+  touch "` + home + `/stopped"
+  exit 0
+fi
+if [ "$1" = rm ]; then
+  test -f "` + home + `/stopped" || exit 2
+  touch "` + home + `/removed"
+  exit 0
+fi
+printf '%s' '` + string(agentJSON) + `'
+`
+	if err := os.WriteFile(bin, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	p := &Provider{profile: core.Profile{Home: home, Binary: bin}}
+	owners, err := p.agents(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	action := core.Action{
+		ID:          "delete",
+		Kind:        "delete",
+		NativeID:    id,
+		Cwd:         cwd,
+		Decision:    "stop_and_delete",
+		ExecutionID: executionID(owners[0]),
+	}
+	r, err := p.deleteHistory(context.Background(), action)
+	if err != nil || r.Status != "accepted" {
+		t.Fatalf("delete failed: %+v %v", r, err)
+	}
+	for _, name := range []string{"stopped", "removed"} {
+		if _, err := os.Stat(filepath.Join(home, name)); err != nil {
+			t.Fatalf("%s not recorded: %v", name, err)
+		}
+	}
+}

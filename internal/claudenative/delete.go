@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"pocketagents/internal/core"
+	"strings"
 	"time"
 )
 
@@ -15,6 +16,9 @@ func (p *Provider) deleteHistory(ctx context.Context, a core.Action) (core.Resul
 	r := core.Result{ActionID: a.ID, NativeID: a.NativeID, Status: "rejected"}
 	path, err := p.findPath(a.NativeID)
 	if err != nil {
+		if strings.Contains(err.Error(), "No native conversation history") {
+			return p.deleteTranscriptlessBackground(ctx, a)
+		}
 		return r, err
 	}
 	real, err := filepath.EvalSymlinks(path)
@@ -101,5 +105,63 @@ func (p *Provider) deleteHistory(ctx context.Context, a core.Action) (core.Resul
 	delete(p.cache, path)
 	r.Status = "accepted"
 	r.Message = "已删除原生会话主记录；项目文件及附件保留。"
+	return r, nil
+}
+
+// deleteTranscriptlessBackground removes a native supervisor record that never
+// reached transcript creation. It is deliberately limited to one exact
+// background owner and never touches the workspace.
+func (p *Provider) deleteTranscriptlessBackground(ctx context.Context, a core.Action) (core.Result, error) {
+	r := core.Result{ActionID: a.ID, NativeID: a.NativeID, Status: "rejected"}
+	agents, err := p.agents(ctx)
+	if err != nil {
+		return r, err
+	}
+	var matches []agent
+	for _, owner := range agents {
+		if owner.SessionID == a.NativeID {
+			matches = append(matches, owner)
+		}
+	}
+	if len(matches) == 0 {
+		return r, errors.New("No native conversation history or background record was found.")
+	}
+	if len(matches) != 1 {
+		return r, errors.New("Multiple native background records match this session; refusing deletion.")
+	}
+	owner := matches[0]
+	if owner.Kind != "background" {
+		return r, errors.New("Transcriptless native session is not a managed background instance.")
+	}
+	if owner.Cwd == "" || owner.Cwd != a.Cwd {
+		return r, errors.New("native background working directory mismatch")
+	}
+	if a.Decision != "stop_and_delete" {
+		return r, errors.New("This native background session has no transcript. Confirm ending and removing its supervisor record.")
+	}
+	id := executionID(owner)
+	if id != "" {
+		if a.ExecutionID == "" || a.ExecutionID != id {
+			return r, errors.New("native instance changed; refresh before deleting")
+		}
+		stopctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		cmd := p.command(stopctx, "stop", owner.ID)
+		cmd.WaitDelay = 2 * time.Second
+		b, stopErr := cmd.CombinedOutput()
+		cancel()
+		if stopErr != nil {
+			return r, fmt.Errorf("could not stop transcriptless native session; record preserved: %w: %s", stopErr, b)
+		}
+	}
+	rmctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	cmd := p.command(rmctx, "rm", owner.ID)
+	cmd.WaitDelay = 2 * time.Second
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		return r, fmt.Errorf("could not remove transcriptless native session: %w: %s", err, b)
+	}
+	r.Status = "accepted"
+	r.Message = "Removed the transcriptless native background session; project files and attachments were kept."
 	return r, nil
 }

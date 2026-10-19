@@ -61,6 +61,10 @@ type agent struct {
 	PID        int    `json:"pid"`
 	StartedAt  int64  `json:"startedAt"`
 }
+type backgroundJobState struct {
+	Detail    string `json:"detail"`
+	SessionID string `json:"sessionId"`
+}
 type attachment struct {
 	exitInput  exitInput
 	terminalID string
@@ -74,6 +78,8 @@ type attachment struct {
 	ready      chan struct{}
 	once       sync.Once
 	size       pty.Winsize
+	sizeCancel context.CancelFunc
+	sizeDone   <-chan struct{}
 }
 
 func New(profile core.Profile) (core.Provider, error) {
@@ -173,6 +179,20 @@ func executionID(a agent) string {
 	h := sha256.Sum256(bytes.TrimSpace(b))
 	return fmt.Sprintf("claude:%s:%d:%s", a.SessionID, a.PID, hex.EncodeToString(h[:6]))
 }
+func (p *Provider) backgroundFailure(a agent) string {
+	if !backgroundShortIDPattern.MatchString(a.ID) {
+		return ""
+	}
+	b, err := os.ReadFile(filepath.Join(p.profile.Home, "jobs", a.ID, "state.json"))
+	if err != nil {
+		return ""
+	}
+	var state backgroundJobState
+	if json.Unmarshal(b, &state) != nil || state.SessionID != a.SessionID {
+		return ""
+	}
+	return strings.TrimSpace(state.Detail)
+}
 func applyAgent(s *core.Session, a agent) {
 	transcriptState := s.TurnState
 	s.Cwd = a.Cwd
@@ -191,7 +211,9 @@ func applyAgent(s *core.Session, a agent) {
 	case "working":
 		s.TurnState = "working"
 	case "blocked":
-		s.TurnState = "waiting_input"
+		// Blocked alone can mean startup failure or an unavailable transcript.
+		// Only an explicit native wait establishes a question or approval.
+		s.TurnState = "unknown"
 	case "done":
 		s.TurnState = "completed"
 	case "failed":
@@ -202,7 +224,7 @@ func applyAgent(s *core.Session, a agent) {
 	if a.Status == "busy" {
 		s.TurnState = "working"
 	}
-	if a.Status == "waiting" {
+	if a.Status == "waiting" || (a.State == "blocked" && a.WaitingFor != "") {
 		s.TurnState = "waiting_input"
 		if strings.Contains(a.WaitingFor, "permission") || strings.Contains(a.WaitingFor, "sandbox") {
 			s.TurnState = "waiting_approval"
@@ -244,6 +266,7 @@ func (p *Provider) Discover(ctx context.Context) ([]core.Session, error) {
 	if e != nil {
 		return nil, e
 	}
+	files = uniqueTranscriptPaths(files)
 	seen := map[string]bool{}
 	byID := map[string]core.Session{}
 	transcriptStates := map[string]string{}
@@ -289,7 +312,8 @@ func (p *Provider) Discover(ctx context.Context) ([]core.Session, error) {
 				continue
 			}
 			s, ok := byID[v.SessionID]
-			if !ok && executionID(v) == "" {
+			hasTranscript := ok
+			if !ok && executionID(v) == "" && !(v.Kind == "background" && (v.State == "failed" || v.State == "stopped")) {
 				continue
 			}
 			if !ok {
@@ -297,6 +321,15 @@ func (p *Provider) Discover(ctx context.Context) ([]core.Session, error) {
 			}
 			s.TurnState = transcriptStates[v.SessionID]
 			applyAgent(&s, v)
+			if !hasTranscript {
+				s.Capabilities.Resume = false
+				s.Capabilities.Reason = "Native background session has no saved conversation history. Remove it or create a new session after resolving the startup failure."
+				if detail := p.backgroundFailure(v); detail != "" {
+					s.Error = "Native background startup failed before creating conversation history: " + detail
+				} else if v.State == "stopped" {
+					s.Error = "Native background session stopped before creating conversation history."
+				}
+			}
 			if v.State == "blocked" && v.Status == "idle" && v.WaitingFor == "" && p.latestReplyFailed(ctx, v.SessionID, s.UpdatedAt) {
 				s.TurnState = "error"
 			}
@@ -343,6 +376,33 @@ func (p *Provider) Discover(ctx context.Context) ([]core.Session, error) {
 	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
 	return out, nil
 }
+
+// A moved workspace can retain a project-directory alias for running native
+// writers. Resolve directory aliases without merging distinct copies of a
+// session. Keep the file itself unresolved so deletion can reject file symlinks.
+func uniqueTranscriptPaths(paths []string) []string {
+	seen := make(map[string]bool, len(paths))
+	directories := make(map[string]string)
+	unique := make([]string, 0, len(paths))
+	for _, path := range paths {
+		dir := filepath.Dir(path)
+		real, ok := directories[dir]
+		if !ok {
+			real = dir
+			if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+				real = resolved
+			}
+			directories[dir] = real
+		}
+		path = filepath.Join(real, filepath.Base(path))
+		if !seen[path] {
+			seen[path] = true
+			unique = append(unique, path)
+		}
+	}
+	return unique
+}
+
 func (p *Provider) findPath(id string) (string, error) {
 	if !nativeIDPattern.MatchString(id) {
 		return "", errors.New("invalid Claude native session ID")
@@ -351,8 +411,12 @@ func (p *Provider) findPath(id string) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	if len(paths) != 1 {
-		return "", fmt.Errorf("native transcript absent or ambiguous (%d matches)", len(paths))
+	paths = uniqueTranscriptPaths(paths)
+	if len(paths) == 0 {
+		return "", errors.New("No native conversation history was found. Check the native terminal for startup prompts.")
+	}
+	if len(paths) > 1 {
+		return "", errors.New("Multiple native conversation records match this session. Cannot safely choose a history file.")
 	}
 	return paths[0], nil
 }
@@ -370,6 +434,7 @@ func (p *Provider) History(ctx context.Context, id, cursor string, limit int) (c
 
 var nativeIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 var backgroundIDPattern = regexp.MustCompile(`backgrounded\s*·\s*([a-f0-9]{8})`)
+var backgroundShortIDPattern = regexp.MustCompile(`^[a-f0-9]{8}$`)
 
 func validDirectory(cwd string) (string, error) {
 	if cwd == "" {
@@ -762,6 +827,18 @@ func (p *Provider) start(ctx context.Context, a core.Action) (core.Result, error
 					if a.Kind == "resume" && v.SessionID != a.NativeID {
 						return r, errors.New("Claude created a different ID rather than resuming; refusing to claim success")
 					}
+					if v.State == "failed" && executionID(v) == "" {
+						r.NativeID = v.SessionID
+						r.Status = "rejected"
+						r.Message = "Native background startup failed before creating conversation history."
+						if detail := p.backgroundFailure(v); detail != "" {
+							r.Message += " " + detail
+						}
+						return r, nil
+					}
+					if executionID(v) == "" {
+						continue
+					}
 					r.NativeID = v.SessionID
 					r.ExecutionID = executionID(v)
 					r.Status = "accepted"
@@ -803,6 +880,11 @@ func (p *Provider) attach(ctx context.Context, a agent, id string) (*attachment,
 		return nil, e
 	}
 	at := &attachment{terminalID: uuid.NewString(), input: input, cmd: c, file: f, ready: make(chan struct{}), size: *size}
+	sizeCtx, sizeCancel := context.WithCancel(context.Background())
+	at.sizeCancel = sizeCancel
+	at.sizeDone = at.followSize(sizeCtx, func(ctx context.Context) *pty.Winsize {
+		return desktopTerminalSize(ctx, p.profile.Binary, a)
+	})
 	p.attachments[id] = at
 	go func() {
 		buf := make([]byte, 32768)
@@ -829,11 +911,13 @@ func (p *Provider) attach(ctx context.Context, a agent, id string) (*attachment,
 			}
 		}
 		clientErr := c.Wait()
-		_ = input.Close()
-		_ = f.Close()
 		at.mu.Lock()
 		at.dead = true
 		at.mu.Unlock()
+		sizeCancel()
+		<-at.sizeDone
+		_ = input.Close()
+		_ = f.Close()
 		at.once.Do(func() { close(at.ready) })
 		p.mu.Lock()
 		defer p.mu.Unlock()
@@ -944,13 +1028,29 @@ func RunCLI(ctx context.Context, profile core.Profile, args []string, stdin, std
 	// The native --bg --resume command deliberately forks a live conversation.
 	// A shell user asking to resume one instead attaches to its existing worker.
 	resume := ""
+	bareResume := false
 	for i, arg := range args {
-		if (arg == "--resume" || arg == "-r") && i+1 < len(args) {
-			resume = args[i+1]
+		if arg == "--resume" || arg == "-r" {
+			bareResume = true
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				resume = args[i+1]
+				bareResume = false
+			}
 		}
 		if strings.HasPrefix(arg, "--resume=") {
 			resume = strings.TrimPrefix(arg, "--resume=")
+			bareResume = resume == ""
 		}
+	}
+	// A bare --resume opens Claude's native session picker. Backgrounding that
+	// picker fabricates a supervisor session with no transcript and leaves it
+	// impossible to resume or delete normally. Keep the picker interactive.
+	if bareResume {
+		c := p.command(ctx, args...)
+		c.Stdin = stdin
+		c.Stdout = stdout
+		c.Stderr = stderr
+		return c.Run()
 	}
 	if resume != "" {
 		if aa, err := p.agents(ctx); err == nil {

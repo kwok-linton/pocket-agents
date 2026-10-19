@@ -119,6 +119,46 @@ func TestTerminalOpenReusesConnectionAndReadReturnsSameScreenToken(t *testing.T)
 	}
 }
 
+func TestTerminalAttachmentOwnsSizeFollowerLifecycle(t *testing.T) {
+	p, owner, old := terminalFixture(t)
+	old.disconnect()
+	delete(p.attachments, executionID(owner))
+	rows, _ := json.Marshal([]agent{owner})
+	marker := filepath.Join(p.profile.Home, "attach-starts")
+	script := "#!/bin/sh\ncase \"$1\" in\n" +
+		"agents) printf '%s\\n' " + shellQuote(string(rows)) + ";;\n" +
+		"attach) printf x >> " + shellQuote(marker) + "; printf '\\033[?25h'; exec cat;;\n" +
+		"*) exit 99;;\nesac\n"
+	if err := os.WriteFile(p.profile.Binary, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	a := core.Action{Kind: "terminal", NativeID: owner.SessionID, ExecutionID: executionID(owner), Data: json.RawMessage(`{"open":true}`)}
+	if _, err := p.Execute(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	att := p.attachments[a.ExecutionID]
+	if att.sizeDone == nil || att.sizeCancel == nil {
+		t.Fatal("new attachment did not start its size follower")
+	}
+	done := att.sizeDone
+	if _, err := p.Execute(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if p.attachments[a.ExecutionID] != att || att.sizeDone != done {
+		t.Fatal("reopening replaced the client or its size follower")
+	}
+	p.Close()
+	select {
+	case <-done:
+	default:
+		t.Fatal("provider close did not join the size follower")
+	}
+	starts, err := os.ReadFile(marker)
+	if err != nil || string(starts) != "x" {
+		t.Fatal("resize monitoring reconnected the native client", err)
+	}
+}
+
 func TestNativeExitRequiresNewExactRecordAndSuccessfulClient(t *testing.T) {
 	p, owner, _ := terminalFixture(t)
 	dir := filepath.Join(p.profile.Home, "projects", "fixture")
