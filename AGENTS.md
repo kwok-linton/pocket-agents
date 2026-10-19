@@ -157,9 +157,9 @@ This builds, signs with the persistent local identity from `scripts/sign-macos-l
 - Start with `git status` and keep other people's uncommitted changes. Never reset, clean or delete material without being asked.
 - Never commit `.pocket-attachments`, runtime databases, CLI history, owner tokens, Node pairing secrets, browser cookies, push endpoints, environment files or signing material, and never print them to logs, reports or chat.
 - Review what is staged: `git diff --check` and `git diff --stat`, then `git diff --cached` and any new files.
-- When asked to commit or push, confirm the remote and branch and commit/push normally; never force-push. Do not publish or push as part of other tasks.
+- Maintainer-authorized fixes are committed and pushed directly to `main` in both the public and private Pocket Agents repositories after verification. Do not create a PR unless explicitly requested. Keep their independent histories and publication boundaries intact; never force-push or delete `main`. External contributors may still submit PRs.
 - Respect the existing license; do not change the license or repository visibility without the maintainers.
-- In the PR description, state what changed, how it was verified and what remains unverified (without private addresses). Distinguish "code changed", "tests pass", "deployed" and "verified on a real device". Do not describe an upstream API outage as fixed.
+- In the commit description and delivery summary, state what changed, how it was verified and what remains unverified (without private addresses). Distinguish "code changed", "tests pass", "deployed" and "verified on a real device". Do not describe an upstream API outage as fixed.
 
 ## What belongs in the repository
 
