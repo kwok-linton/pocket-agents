@@ -280,7 +280,7 @@ function ActionStatus({
       // An unconfirmed result blocks new input; show the way out up front.
       open={result.status === "unknown" || undefined}
     >
-      <summary>{operation} · {result.status === "submitted" ? t("等待确认") : result.status === "unknown" ? t("结果待核对") : t("未成功")}<span>{t("查看详情")}</span></summary>
+      <summary>{operation} · {result.status === "submitted" ? t("等待确认") : result.status === "unknown" ? t("结果待核对") : t("未成功")}{result.status === "rejected" && result.message ? `：${tServer(result.message)}` : ""}<span>{t("查看详情")}</span></summary>
       <div>
         <strong>
           {operation} · {
@@ -2091,7 +2091,7 @@ function Conversation({
           )}
           {error && (
             <div className="notice warning" role="alert">
-              {error.includes('no rollout found') ? t("这条会话尚无已保存的原生聊天记录。") : t("历史读取暂未完成：{0}", { 0: tServer(error) })}
+              {error.includes('no rollout found') || error.includes('No native conversation history') ? t("这条会话尚无已保存的原生聊天记录。") : t("历史读取暂未完成：{0}", { 0: tServer(error) })}
             </div>
           )}
           {!initialized.current && !!history.messages.length && <p className="field-hint" role="status">{t("先显示上次查看的内容，正在核对最新原生记录…")}</p>}
@@ -2106,7 +2106,7 @@ function Conversation({
               ))}
             </div>
           ) : error && !history.messages.length ? (
-            error.includes('no rollout found') ?
+            error.includes('no rollout found') || error.includes('No native conversation history') ?
             <Empty title={t("没有已保存的聊天记录")}>{t("这可能是尚未开始对话的空会话。返回列表选择其他会话即可，无需等待重连。")}</Empty> :
             <Empty title={t("暂时无法读取会话")}>{t("请稍后重试；若持续失败，可查看原生客户端中的会话状态。")}</Empty>
           ) : !history.messages.length ? (

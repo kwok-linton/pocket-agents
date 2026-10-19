@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"pocketagents/internal/core"
 	"strings"
@@ -38,6 +39,23 @@ func (p *Provider) renameHistory(ctx context.Context, a core.Action) (core.Resul
 	}
 	for _, agent := range agents {
 		if agent.SessionID == a.NativeID && executionID(agent) != "" {
+			// Claude can leave a completed background worker resident at an idle
+			// terminal that is no longer safe to type into. It has no live turn,
+			// so release only that worker and use Claude's historical --name path.
+			if agent.Kind == "background" && agent.State == "done" && agent.Status == "idle" {
+				if !backgroundShortIDPattern.MatchString(agent.ID) {
+					return r, errors.New("completed native session has an invalid background ID")
+				}
+				stopCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+				cmd := p.command(stopCtx, "stop", agent.ID)
+				cmd.WaitDelay = 2 * time.Second
+				output, stopErr := cmd.CombinedOutput()
+				cancel()
+				if stopErr != nil {
+					return r, fmt.Errorf("could not stop completed native session before rename: %w: %s", stopErr, strings.TrimSpace(string(output)))
+				}
+				break
+			}
 			return p.renameLive(ctx, a, agent, path, name)
 		}
 	}

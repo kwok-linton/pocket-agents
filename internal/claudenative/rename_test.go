@@ -75,3 +75,54 @@ func TestLiveRenameUsesExistingTerminalAndNativeConfirmation(t *testing.T) {
 		t.Fatal("busy rename wrote input")
 	}
 }
+
+func TestRenameStopsCompletedResidentWorkerBeforeHistoricalRename(t *testing.T) {
+	dir := t.TempDir()
+	project := filepath.Join(dir, "projects", "fixture")
+	if err := os.MkdirAll(project, 0700); err != nil {
+		t.Fatal(err)
+	}
+	cwd := t.TempDir()
+	id := "10000000-0000-4000-8000-000000000002"
+	path := filepath.Join(project, id+".jsonl")
+	initial, _ := json.Marshal(map[string]any{
+		"type": "user", "sessionId": id, "cwd": cwd,
+		"message": map[string]string{"role": "user", "content": "test"},
+	})
+	if err := os.WriteFile(path, append(initial, '\n'), 0600); err != nil {
+		t.Fatal(err)
+	}
+	owner := agent{ID: "deadbeef", SessionID: id, Cwd: cwd, PID: os.Getpid(), Kind: "background", Status: "idle", State: "done"}
+	rows, _ := json.Marshal([]agent{owner})
+	cli := filepath.Join(dir, "claude")
+	script := `#!/bin/sh
+if [ "$1" = agents ]; then
+  if [ -f "` + dir + `/stopped" ]; then printf '[]'; else printf '%s' '` + string(rows) + `'; fi
+  exit 0
+fi
+if [ "$1" = stop ]; then
+  touch "` + dir + `/stopped"
+  exit 0
+fi
+if [ "$1" = --resume ]; then
+  printf '%s\n' '{"type":"custom-title","customTitle":"New name"}' >> "` + path + `"
+  exit 0
+fi
+exit 3
+`
+	if err := os.WriteFile(cli, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	p := &Provider{profile: core.Profile{Name: "fixture", Home: dir, Binary: cli}}
+	r, err := p.renameHistory(context.Background(), core.Action{ID: "rename", NativeID: id, Cwd: cwd, Text: "New name"})
+	if err != nil || r.Status != "accepted" {
+		t.Fatalf("rename failed: %+v %v", r, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "stopped")); err != nil {
+		t.Fatalf("completed worker was not stopped: %v", err)
+	}
+	meta, err := readMetadata(path, "fixture")
+	if err != nil || meta.Title != "New name" {
+		t.Fatalf("native title not updated: %+v %v", meta, err)
+	}
+}

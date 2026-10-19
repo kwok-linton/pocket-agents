@@ -85,6 +85,69 @@ func TestExitedNativeWorkerDoesNotAdvertiseHistoricalWaitOrWork(t *testing.T) {
 	}
 }
 
+func TestDiscoverKeepsTranscriptlessFailedBackground(t *testing.T) {
+	home := t.TempDir()
+	cwd := t.TempDir()
+	id := "11111111-2222-3333-4444-555555555555"
+	agentJSON, _ := json.Marshal([]map[string]any{{
+		"id": "deadbeef", "sessionId": id, "cwd": cwd, "kind": "background", "state": "failed",
+	}})
+	bin := filepath.Join(home, "claude")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf '%s' '"+string(agentJSON)+"'\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	jobDir := filepath.Join(home, "jobs", "deadbeef")
+	if err := os.MkdirAll(jobDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	stateJSON, _ := json.Marshal(backgroundJobState{SessionID: id, Detail: "exit 1 before init — EPERM"})
+	if err := os.WriteFile(filepath.Join(jobDir, "state.json"), stateJSON, 0600); err != nil {
+		t.Fatal(err)
+	}
+	p := &Provider{profile: core.Profile{Home: home, Binary: bin}}
+	sessions, err := p.Discover(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("failed native job disappeared: %+v", sessions)
+	}
+	s := sessions[0]
+	if s.NativeID != id || s.TurnState != "error" || s.ExecutionState != "exited" || s.Capabilities.Resume || !strings.Contains(s.Error, "EPERM") {
+		t.Fatalf("failed native job misrepresented: %+v", s)
+	}
+}
+
+func TestStartRejectsNativeJobThatFailedBeforeInit(t *testing.T) {
+	home := t.TempDir()
+	cwd := t.TempDir()
+	id := "11111111-2222-3333-4444-555555555555"
+	agentJSON, _ := json.Marshal([]map[string]any{{
+		"id": "deadbeef", "sessionId": id, "cwd": cwd, "kind": "background", "state": "failed",
+	}})
+	bin := filepath.Join(home, "claude")
+	script := "#!/bin/sh\nif [ \"$1\" = agents ]; then printf '%s' '" + string(agentJSON) + "'; else printf 'backgrounded · deadbeef\\n'; fi\n"
+	if err := os.WriteFile(bin, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	jobDir := filepath.Join(home, "jobs", "deadbeef")
+	if err := os.MkdirAll(jobDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	stateJSON, _ := json.Marshal(backgroundJobState{SessionID: id, Detail: "exit 1 before init — EPERM"})
+	if err := os.WriteFile(filepath.Join(jobDir, "state.json"), stateJSON, 0600); err != nil {
+		t.Fatal(err)
+	}
+	p := &Provider{profile: core.Profile{Home: home, Binary: bin}}
+	r, err := p.start(context.Background(), core.Action{ID: "create", Kind: "create", Cwd: cwd, Text: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Status != "rejected" || r.NativeID != id || r.ExecutionID != "" || !strings.Contains(r.Message, "EPERM") {
+		t.Fatalf("failed launch was accepted: %+v", r)
+	}
+}
+
 // Opt-in integration test creates only a dedicated native M0 session. It runs a
 // real model request using the configured user's existing credentials/config.
 func TestRealNativeLoop(t *testing.T) {
@@ -429,5 +492,60 @@ func TestHistoryLookupDistinguishesMissingAndDuplicateRecords(t *testing.T) {
 	}
 	if path, err := p.findPath(id); err == nil || path != "" || !strings.Contains(err.Error(), "Multiple native conversation records") {
 		t.Fatalf("ambiguous history selected: %q %v", path, err)
+	}
+}
+
+func TestWorkspaceAliasSharesHistoryAndDiscovery(t *testing.T) {
+	home := t.TempDir()
+	cwd := t.TempDir()
+	id := "00000000-0000-0000-0000-000000000002"
+	dir := filepath.Join(home, "projects", "original")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, id+".jsonl")
+	row, _ := json.Marshal(map[string]any{"type": "user", "uuid": "first", "sessionId": id, "cwd": cwd, "message": map[string]any{"content": "alias fixture"}})
+	if err := os.WriteFile(path, append(row, '\n'), 0600); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(home, "projects", "moved")
+	if err := os.Symlink(dir, alias); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(home, "claude")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf '[]\\n'\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	provider, err := New(core.Profile{Home: home, Binary: bin})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := provider.(*Provider)
+	got, err := p.findPath(id)
+	real, _ := filepath.EvalSymlinks(path)
+	if err != nil || got != real {
+		t.Fatalf("project alias treated as a distinct transcript: %q %v", got, err)
+	}
+	history, err := p.History(context.Background(), id, "", 20)
+	if err != nil || len(history.Messages) != 1 {
+		t.Fatalf("history through alias: %+v %v", history, err)
+	}
+	sessions, err := p.Discover(context.Background())
+	if err != nil || len(sessions) != 1 || len(p.cache) != 1 || !sessions[0].Capabilities.Resume {
+		t.Fatalf("duplicate discovery/cache for alias: %+v cache=%d err=%v", sessions, len(p.cache), err)
+	}
+	// Existing writers can keep appending through either project path.
+	f, err := os.OpenFile(filepath.Join(alias, id+".jsonl"), os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.WriteString("{\"type\":\"user\",\"uuid\":\"second\",\"message\":{\"content\":\"still shared\"}}\n")
+	_ = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	history, err = p.History(context.Background(), id, "", 20)
+	if err != nil || len(history.Messages) != 2 {
+		t.Fatalf("alias write did not reach the same history: %+v %v", history, err)
 	}
 }

@@ -58,8 +58,10 @@ func (p *Provider) stopExecution(ctx context.Context, a core.Action, current age
 
 func (a *attachment) disconnect() {
 	a.mu.Lock()
-	defer a.mu.Unlock()
 	a.dead = true
+	if a.sizeCancel != nil {
+		a.sizeCancel()
+	}
 	if a.input != nil {
 		_ = a.input.Close()
 	}
@@ -68,5 +70,9 @@ func (a *attachment) disconnect() {
 	}
 	if a.cmd != nil && a.cmd.Process != nil {
 		_ = a.cmd.Process.Kill()
+	}
+	a.mu.Unlock()
+	if a.sizeDone != nil {
+		<-a.sizeDone
 	}
 }

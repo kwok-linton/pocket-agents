@@ -155,6 +155,43 @@ func TestRunCLINonTerminalRejectsBeforeNativeLaunch(t *testing.T) {
 	}
 }
 
+func TestRunCLIBareResumeUsesNativePickerWithoutBackgrounding(t *testing.T) {
+	dir := t.TempDir()
+	binary := filepath.Join(dir, "native-fixture")
+	record := filepath.Join(dir, "args")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$POCKET_FIXTURE_RECORD\"\n"
+	if err := os.WriteFile(binary, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	input, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
+	output, err := os.CreateTemp(dir, "output")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer output.Close()
+	if err = RunCLI(
+		context.Background(),
+		core.Profile{Binary: binary, Home: dir, Env: []string{"POCKET_FIXTURE_RECORD=" + record}},
+		[]string{"--resume", "--dangerously-skip-permissions"},
+		input,
+		output,
+		output,
+	); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "--resume\n--dangerously-skip-permissions\n" {
+		t.Fatalf("bare resume was rewritten: %q", got)
+	}
+}
+
 func TestCLILaunchFailureRestoresTerminal(t *testing.T) {
 	master, slave, err := pty.Open()
 	if err != nil {
