@@ -415,7 +415,11 @@ func (p *Provider) threads(fetch func(cursor string, repair bool) (threadPage, e
 				all[id] = t
 			}
 			for _, t := range first.Data {
-				all[t.ID], fresh[t.ID] = t, true
+				// Native repair listings can contain multiple rollout segments for
+				// one thread. Never let an older segment replace its newest state.
+				if !fresh[t.ID] || t.Updated > all[t.ID].Updated {
+					all[t.ID], fresh[t.ID] = t, true
+				}
 			}
 			p.mu.Lock()
 			p.listed = all
@@ -425,7 +429,11 @@ func (p *Provider) threads(fetch func(cursor string, repair bool) (threadPage, e
 		if first.Next == "" {
 			// The first page was the whole listing.
 			for _, t := range first.Data {
-				all[t.ID], fresh[t.ID] = t, true
+				// Native repair listings can contain multiple rollout segments for
+				// one thread. Never let an older segment replace its newest state.
+				if !fresh[t.ID] || t.Updated > all[t.ID].Updated {
+					all[t.ID], fresh[t.ID] = t, true
+				}
 			}
 			p.mu.Lock()
 			p.listed, p.listedAt = all, time.Now()
@@ -440,7 +448,11 @@ func (p *Provider) threads(fetch func(cursor string, repair bool) (threadPage, e
 			return nil, nil, e
 		}
 		for _, t := range page.Data {
-			all[t.ID], fresh[t.ID] = t, true
+			// Native repair listings can contain multiple rollout segments for
+			// one thread. Never let an older segment replace its newest state.
+			if !fresh[t.ID] || t.Updated > all[t.ID].Updated {
+				all[t.ID], fresh[t.ID] = t, true
+			}
 		}
 		if page.Next == "" {
 			break

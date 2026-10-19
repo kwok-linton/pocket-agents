@@ -40,12 +40,12 @@ func (s *Store) RecordTurn(next, previous core.Session, existed, notify bool) er
 		return err
 	}
 	current := turn{next.TurnState, next.TurnID}
-	// Persist completion identity independently of transient working/waiting
-	// observations. One native turn may finish only once across restarts.
+	// Persist terminal-state identity independently of transient working/waiting
+	// observations. Reconciliation must not replay an interruption or error either.
 	completionKey := ""
 	duplicateCompletion := false
-	if next.TurnState == "completed" && next.TurnID != "" {
-		completionKey = fmt.Sprintf("completed-turn:%x", sha256.Sum256([]byte(next.ID+"\x00"+next.TurnID)))
+	if (next.TurnState == "completed" || next.TurnState == "interrupted" || next.TurnState == "error") && next.TurnID != "" {
+		completionKey = fmt.Sprintf("%s-turn:%x", next.TurnState, sha256.Sum256([]byte(next.ID+"\x00"+next.TurnID)))
 		var count int
 		if err := tx.QueryRow("SELECT COUNT(*) FROM kv WHERE key=?", completionKey).Scan(&count); err != nil {
 			return err

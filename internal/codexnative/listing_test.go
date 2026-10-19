@@ -106,3 +106,36 @@ func TestLockedThreadsReadsDirectoryOnce(t *testing.T) {
 		t.Fatal("lock file not found", locks, ok)
 	}
 }
+
+func TestListingKeepsNewestSegmentForDuplicateNativeIDs(t *testing.T) {
+	for _, cached := range []bool{false, true} {
+		for _, acrossPages := range []bool{false, true} {
+			p := &Provider{}
+			latest := thread("same", 20)
+			latest.Path = "latest.jsonl"
+			old := thread("same", 10)
+			old.Path = "old.jsonl"
+			f := &fakeListing{threads: []nativeThread{latest, old}}
+			if acrossPages {
+				f.threads = []nativeThread{latest, thread("other", 15), old}
+			}
+			if cached {
+				p.lastRepair = time.Now()
+				p.listedAt = time.Now()
+				p.listed = map[string]nativeThread{"same": latest, "other": thread("other", 15)}
+			}
+			list, _, err := p.threads(f.fetch)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, row := range list {
+				if row.ID == "same" && row.Path != "latest.jsonl" {
+					t.Fatalf("older segment replaced latest: %+v", row)
+				}
+			}
+			if p.listed["same"].Path != "latest.jsonl" {
+				t.Fatal("cached old segment")
+			}
+		}
+	}
+}
