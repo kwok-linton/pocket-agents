@@ -77,3 +77,14 @@ test("checkbox redraw, Submit focus and navigation back preserve the whole menu"
   assert.equal(chat.selected, 4);
   assert.equal(moveKeys(chat, 3), "\x1b[A");
 });
+
+
+test("timed Yes/No approval keeps both choices through highlight changes", () => {
+  const screen = "Bash command\nDangerous operation\nAutomatically deny in 1:40\n\nDo you want to proceed?\n❯ 1. Yes\n  2. No\n\nEsc to cancel · Tab to amend";
+  const yes = terminalMenu(screen)!;
+  assert.deepEqual(yes.options.map(o => o.label), ["Yes", "No"]);
+  assert.equal(moveKeys(yes, 1), "\x1b[B");
+  const no = terminalMenu(screen.replace("❯ 1.", "  1.").replace("  2.", "❯ 2."))!;
+  assert.equal(no.selected, 1);
+  assert.equal(moveKeys(no, 0), "\x1b[A");
+});

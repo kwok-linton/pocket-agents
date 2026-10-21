@@ -2,6 +2,8 @@
 // (and Chinese messages the backend sends). {0} inserts a value;
 // {0|one|many} picks singular/plural. `npm test` fails if a key is missing.
 export const en: Record<string, string> = {
+  "点选项切换高亮；点高亮项确认。上方终端文字不能点击。": "Tap an option to highlight it; tap the highlighted option to confirm. The terminal text above is not clickable.",
+  "点击选择": "Tap to select",
   "查看具体问题，再按提示输入回答或选择选项。": "Read the question, then enter your answer or choose an option.",
   "查看问题": "View question",
   "当前实例已退出，历史记录保留。": "This instance has exited. Conversation history is retained.",
@@ -730,10 +732,10 @@ export const en: Record<string, string> = {
   "移到 {0}": "Move to {0}",
   "已勾选": "Checked",
   "未勾选": "Unchecked",
-  "再点确认": "Tap again to confirm",
+  "点击确认": "Tap to confirm",
   "提交选择": "Submit choices",
-  "再点取消勾选": "Tap again to uncheck",
-  "再点勾选": "Tap again to check",
+  "取消勾选": "Uncheck",
+  "点击勾选": "Tap to check",
   "输入文字，回车发送…": "Type, then Enter to send…",
   "更多按键": "More keys",
 };

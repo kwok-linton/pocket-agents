@@ -3562,12 +3562,13 @@ function TerminalPanel({
             {data.screen ??
               data.output?.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")}
           </pre>
+          {menu && <div className="terminal-menu-help">{t("点选项切换高亮；点高亮项确认。上方终端文字不能点击。")}</div>}
           {menu && (
             <div className="terminal-menu" role="group" aria-label={t("原生选项")}>
               {menu.options.map((option, i) => {
                 const current = i === menu.selected;
                 const label = option.number === null ? t("提交选择") : option.label;
-                const hint = option.checked === undefined ? t("再点确认") : option.checked ? t("再点取消勾选") : t("再点勾选");
+                const hint = option.checked === undefined ? t("点击确认") : option.checked ? t("取消勾选") : t("点击勾选");
                 return (
                   <button key={option.number ?? "submit"} type="button" aria-pressed={current} disabled={disconnected || busy || (!current && menu.selected < 0)}
                     className={`terminal-option ${current ? "selected" : ""}`}
@@ -3577,7 +3578,7 @@ function TerminalPanel({
                     <span className="terminal-option-number">{option.number ?? "✓"}</span>
                     {option.checked !== undefined && <span className="terminal-option-check" aria-label={option.checked ? t("已勾选") : t("未勾选")}>{option.checked ? "✓" : ""}</span>}
                     <span className="terminal-option-label">{label}</span>
-                    {current && <span className="terminal-option-hint">{hint}</span>}
+                    <span className="terminal-option-hint">{current ? hint : t("点击选择")}</span>
                   </button>
                 );
               })}
