@@ -497,19 +497,26 @@ func (p *Provider) Execute(ctx context.Context, a core.Action) (core.Result, err
 		return r, e
 	}
 	var current *agent
+	sessionFound := false
 	for i := range agents {
-		if agents[i].SessionID == a.NativeID {
+		if agents[i].SessionID != a.NativeID {
+			continue
+		}
+		sessionFound = true
+		// --all can include exited generations before the current instance.
+		// Never select a different generation just because its session matches.
+		if a.ExecutionID != "" && executionID(agents[i]) == a.ExecutionID {
 			current = &agents[i]
 			break
 		}
 	}
-	if current == nil {
+	if !sessionFound {
 		return r, errors.New("native session is not running; use explicit resume")
 	}
-	id := executionID(*current)
-	if a.ExecutionID == "" || id == "" || a.ExecutionID != id {
+	if current == nil {
 		return r, errors.New("execution changed or exited; refresh before sending")
 	}
+	id := a.ExecutionID
 	if current.Kind == "interactive" && a.Kind == "send" {
 		return p.sendInbox(ctx, a, *current)
 	}

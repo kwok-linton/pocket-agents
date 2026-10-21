@@ -549,3 +549,44 @@ func TestWorkspaceAliasSharesHistoryAndDiscovery(t *testing.T) {
 		t.Fatalf("alias write did not reach the same history: %+v %v", history, err)
 	}
 }
+
+func TestExecuteMatchesRequestedGenerationAmongHistoricalAgents(t *testing.T) {
+	const nativeID = "11111111-2222-3333-4444-555555555555"
+	live := agent{SessionID: nativeID, PID: os.Getpid(), Kind: "background"}
+	generation := executionID(live)
+	if generation == "" {
+		t.Fatal("test process has no execution identity")
+	}
+	dead := agent{SessionID: nativeID, Kind: "background", State: "done"}
+	for _, tc := range []struct {
+		name      string
+		agents    []agent
+		execution string
+		want      string
+	}{
+		{"historical first", []agent{dead, live}, generation, "Claude approval requires"},
+		{"live first", []agent{live, dead}, generation, "Claude approval requires"},
+		{"stale generation", []agent{dead, live}, generation + "-stale", "execution changed or exited"},
+		{"empty generation", []agent{dead, live}, "", "execution changed or exited"},
+		{"exited only", []agent{dead}, generation, "execution changed or exited"},
+		{"other session", []agent{{SessionID: "other", PID: os.Getpid(), Kind: "background"}}, generation, "native session is not running"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			data, err := json.Marshal(tc.agents)
+			if err != nil {
+				t.Fatal(err)
+			}
+			binary := filepath.Join(home, "claude")
+			if err := os.WriteFile(binary, []byte("#!/bin/sh\nprintf '%s' '"+string(data)+"'\n"), 0700); err != nil {
+				t.Fatal(err)
+			}
+			p := &Provider{profile: core.Profile{Home: home, Binary: binary}}
+			// Approve is always rejected after identity validation; no live input is sent.
+			_, err = p.Execute(context.Background(), core.Action{Kind: "approve", NativeID: nativeID, ExecutionID: tc.execution})
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("got %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
