@@ -159,8 +159,28 @@ func runCLIProxy(cmd *exec.Cmd, stdin, stdout *os.File, singleTarget bool, inten
 		buf := make([]byte, 8192)
 		var copyErr error
 		var ended time.Time
+		var display *attachDisplay
+		if singleTarget && term.IsTerminal(int(stdout.Fd())) {
+			display = &attachDisplay{size: func() (int, int) {
+				size, err := pty.GetsizeFull(stdin)
+				if err != nil {
+					return 0, 0
+				}
+				return int(size.Rows), int(size.Cols)
+			}}
+		}
+		write := func(b []byte) {
+			if copyErr == nil && len(b) > 0 {
+				_, copyErr = stdout.Write(b)
+			}
+		}
 		fds := []unix.PollFd{{Fd: int32(masterFD), Events: unix.POLLIN}}
-		defer func() { outputDone <- copyErr }()
+		defer func() {
+			if display != nil {
+				write(display.finish())
+			}
+			outputDone <- copyErr
+		}()
 		for {
 			select {
 			case <-done:
@@ -181,6 +201,9 @@ func runCLIProxy(cmd *exec.Cmd, stdin, stdout *os.File, singleTarget bool, inten
 				return
 			}
 			if n == 0 {
+				if display != nil {
+					write(display.idle(time.Now()))
+				}
 				if !ended.IsZero() {
 					return
 				}
@@ -192,8 +215,10 @@ func runCLIProxy(cmd *exec.Cmd, stdin, stdout *os.File, singleTarget bool, inten
 				if len(output) > 256*1024 {
 					output = append([]byte(nil), output[len(output)-256*1024:]...)
 				}
-				if copyErr == nil {
-					_, copyErr = stdout.Write(buf[:n])
+				if display != nil {
+					write(display.feed(buf[:n], time.Now()))
+				} else {
+					write(buf[:n])
 				}
 			}
 			if readErr == unix.EAGAIN || readErr == unix.EINTR {

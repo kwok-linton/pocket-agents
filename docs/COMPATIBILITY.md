@@ -24,3 +24,7 @@ Development has exercised Claude Code 2.1.302 and Codex CLI 0.153.4/0.162.1 with
 - UI translations and README translations have separate coverage; a Japanese README does not imply a Japanese application UI.
 
 See [validation](ACCEPTANCE.md) and [installation](INSTALL.md).
+
+### Desktop reconnect display
+
+Default Pocket-managed Claude desktop connections retain the previous terminal frame during native reconnects and show at most one bottom-line reconnect notice per reconnect cycle. Native input, session identity and reconnection remain unchanged. Explicit native subcommands bypass this display adapter. Existing proxy processes must detach and reattach to load an updated binary. Fake CLI/PTY tests and the full checks pass; real-terminal reconnect behavior remains to be verified.
