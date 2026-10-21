@@ -74,24 +74,9 @@ func (p *Provider) finishNativeExit(ctx context.Context, current agent, generati
 }
 
 func (p *Provider) runTargetCLI(ctx context.Context, short string, stdin, stdout *os.File) error {
-	aa, err := p.agents(ctx)
+	current, generation, err := p.waitTargetCLI(ctx, short)
 	if err != nil {
 		return err
-	}
-	var current *agent
-	for _, a := range aa {
-		if a.ID == short || a.SessionID == short {
-			v := a
-			current = &v
-			break
-		}
-	}
-	if current == nil || current.Kind != "background" {
-		return fmt.Errorf("native background execution unavailable; inspect native sessions before retrying")
-	}
-	generation := executionID(*current)
-	if generation == "" {
-		return fmt.Errorf("native execution exited before attach")
 	}
 	var intent exitInput
 	c := p.command(ctx, "attach", current.ID)
@@ -109,4 +94,29 @@ func (p *Provider) runTargetCLI(ctx context.Context, short string, stdin, stdout
 		}
 	}
 	return err
+}
+
+// Native background startup can publish its ID before the worker PID is ready.
+// Poll only that target; never create or resume another writer while waiting.
+func (p *Provider) waitTargetCLI(ctx context.Context, target string) (*agent, string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	for {
+		aa, err := p.agents(ctx)
+		if err != nil {
+			return nil, "", err
+		}
+		for _, a := range aa {
+			if (a.ID == target || a.SessionID == target) && a.Kind == "background" {
+				if generation := executionID(a); generation != "" {
+					return &a, generation, nil
+				}
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return nil, "", fmt.Errorf("native background execution is not ready; inspect native sessions before retrying: %w", ctx.Err())
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
 }
