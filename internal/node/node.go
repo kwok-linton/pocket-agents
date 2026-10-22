@@ -148,6 +148,7 @@ func (n *Node) scan(ctx context.Context) {
 			n.mu.Unlock()
 			continue
 		}
+		ss = canonicalSessionDirectories(ss)
 		n.mu.Lock()
 		seen := make(map[string]bool, len(ss))
 		for i := range ss {
