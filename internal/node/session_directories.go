@@ -1,6 +1,7 @@
 package node
 
 import (
+	"os"
 	"path/filepath"
 	"pocketagents/internal/core"
 )
@@ -16,7 +17,7 @@ func canonicalSessionDirectories(sessions []core.Session) []core.Session {
 		if !ok {
 			canonical = cwd
 			if filepath.IsAbs(cwd) {
-				if resolved, err := filepath.EvalSymlinks(cwd); err == nil {
+				if resolved, err := directoryAlias(cwd); err == nil {
 					canonical = resolved
 				}
 			}
@@ -25,4 +26,22 @@ func canonicalSessionDirectories(sessions []core.Session) []core.Session {
 		out[i].Cwd = canonical
 	}
 	return out
+}
+
+// A removed worktree may still have history. Resolve its existing ancestor so
+// its records remain under the migrated project, without claiming it exists.
+func directoryAlias(path string) (string, error) {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err == nil || !os.IsNotExist(err) {
+		return resolved, err
+	}
+	parent := filepath.Dir(path)
+	if parent == path {
+		return "", err
+	}
+	resolved, parentErr := directoryAlias(parent)
+	if parentErr != nil {
+		return "", err
+	}
+	return filepath.Join(resolved, filepath.Base(path)), nil
 }
