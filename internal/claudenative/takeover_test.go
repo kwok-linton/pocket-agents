@@ -19,7 +19,7 @@ import (
 // A disposable sleep process is the old owner; a fake CLI simulates native
 // resume. No test sends text to, signals, or approves a real Claude session.
 func TestPhoneTakeover(t *testing.T) {
-	for _, scenario := range []string{"resume", "busy", "waiting", "stale", "unconfirmed", "draft", "wrong-workspace", "peer-send", "launch-failure", "stop-unconfirmed"} {
+	for _, scenario := range []string{"resume", "busy", "waiting", "stale", "unconfirmed", "draft", "wrong-workspace", "peer-send", "launch-failure", "stop-unconfirmed", "shell-drift"} {
 		t.Run(scenario, func(t *testing.T) {
 			home := t.TempDir()
 			cwd := t.TempDir()
@@ -93,6 +93,22 @@ func TestPhoneTakeover(t *testing.T) {
 			}
 			writeJSON(filepath.Join(home, "sessions", strconv.Itoa(owner.PID)+".json"), presence)
 			writeJSON(filepath.Join(home, "projects", "fixture", id+".jsonl"), map[string]any{"type": "assistant", "cwd": cwd, "message": map[string]string{"content": "Done", "stop_reason": "end_turn"}})
+			if scenario == "shell-drift" {
+				childDir := filepath.Join(cwd, "component")
+				if err := os.Mkdir(childDir, 0700); err != nil {
+					t.Fatal(err)
+				}
+				row, _ := json.Marshal(map[string]any{"type": "assistant", "cwd": childDir, "message": map[string]string{"content": "Done"}})
+				f, e := os.OpenFile(filepath.Join(home, "projects", "fixture", id+".jsonl"), os.O_APPEND|os.O_WRONLY, 0600)
+				if e != nil {
+					t.Fatal(e)
+				}
+				_, e = f.Write(append(row, '\n'))
+				f.Close()
+				if e != nil {
+					t.Fatal(e)
+				}
+			}
 			agentsPath := filepath.Join(home, "agents.json")
 			writeJSON(agentsPath, []agent{owner})
 			next := agent{ID: "abcdef12", SessionID: id, Kind: "background", Cwd: cwd, PID: os.Getpid(), State: "done"}
@@ -142,7 +158,7 @@ func TestPhoneTakeover(t *testing.T) {
 				return
 			}
 
-			if scenario != "resume" && scenario != "launch-failure" {
+			if scenario != "resume" && scenario != "shell-drift" && scenario != "launch-failure" {
 				if err == nil || r.Status == "accepted" {
 					t.Fatalf("unsafe takeover accepted: %+v %v", r, err)
 				}

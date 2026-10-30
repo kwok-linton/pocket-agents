@@ -49,9 +49,8 @@ func (p *Provider) takeover(ctx context.Context, a core.Action, current agent) (
 	if err != nil {
 		return r, err
 	}
-	nativeCwd, err := validDirectory(meta.Cwd)
-	if err != nil || cwd != nativeCwd {
-		return r, errors.New("resume must use the existing native working directory")
+	if err := validateResumeDirectory(path, cwd, meta.Cwd); err != nil {
+		return r, err
 	}
 	ownerCwd, err := validDirectory(current.Cwd)
 	if err != nil || cwd != ownerCwd {
