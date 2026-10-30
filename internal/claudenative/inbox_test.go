@@ -71,29 +71,10 @@ func TestNativeInteractiveInbox(t *testing.T) {
 	}
 	action := core.Action{ID: "pocket-inbox-proof-" + time.Now().Format("150405.000000"), NativeID: id, ExecutionID: generation, Kind: "send", Text: "Reply exactly POCKET_NATIVE_INBOX_ADAPTER_OK. Do not use tools or modify any files."}
 	result, err := p.Execute(ctx, action)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || result.Status == "accepted" || !strings.Contains(err.Error(), "peer messages") {
+		t.Fatalf("interactive chat must not send a peer message: %+v %v", result, err)
 	}
-	if result.Status != "accepted" {
-		t.Fatalf("delivery status %s: %s", result.Status, result.Message)
-	}
-	if executionID(current) != generation {
-		t.Fatal("native execution changed")
-	}
-	history, err := p.History(ctx, id, "", 30)
-	if err != nil {
-		t.Fatal(err)
-	}
-	found := false
-	for _, m := range history.Messages {
-		if m.Role == "user" && m.Kind == "phone_message" && m.Text == action.Text {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatal("confirmed phone message not visible in history")
-	}
-	t.Log("same native execution, confirmed transcript delivery, phone attribution passed")
+
 }
 
 func TestInboxLateConfirmation(t *testing.T) {
@@ -139,7 +120,7 @@ func TestInboxLateConfirmation(t *testing.T) {
 	}
 	found := false
 	for _, m := range h.Messages {
-		if m.ID == "delivered" && m.Kind == "phone_message" && m.Text == a.Text {
+		if m.ID == "delivered" && m.Kind == "phone_peer_message" && m.Text == a.Text {
 			found = true
 		}
 	}

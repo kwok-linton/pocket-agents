@@ -486,6 +486,17 @@ func (n *Node) execute(ctx context.Context, a core.Action) (core.Result, error) 
 			return finish(r)
 		}
 		a.Cwd = path
+	case "takeover":
+		if a.Provider != "claude" || a.NativeID == "" || a.ExecutionID == "" {
+			r.Message = "Claude session and execution generation required"
+			return finish(r)
+		}
+		path, e := config.ValidatePath(n.C.Roots, a.Cwd, false)
+		if e != nil {
+			r.Message = e.Error()
+			return finish(r)
+		}
+		a.Cwd = path
 	case "send", "approve", "interrupt", "terminate", "terminal", "terminal_input":
 		if a.NativeID == "" || a.ExecutionID == "" {
 			r.Message = "native session and execution generation required"

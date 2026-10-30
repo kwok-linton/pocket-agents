@@ -19,6 +19,7 @@ type Profile struct {
 	Env                        []string `json:"env,omitempty"`
 }
 type Capabilities struct {
+	Takeover   bool   `json:"takeover,omitempty"`
 	InputMode  string `json:"inputMode,omitempty"`
 	Terminate  bool   `json:"terminate"`
 	Discover   bool   `json:"discover"`

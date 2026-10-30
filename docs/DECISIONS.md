@@ -48,3 +48,9 @@
 改为即时提醒：只推仍未处理的最新事件，首次失败后退避 1/2/4 秒最多重试三次，失败即丢弃。发送前消费游标，重启不恢复已尝试事件；启动跳过积压、普通推送 TTL=0，不让网关为离线手机排队。超过一分钟的延迟事件仅保留收件箱，已处理/已读/被更新事件取代的提醒不再发送。Node 持久传输保留事件记录，不等于恢复后补推系统通知。诊断测试独立 TTL=120 秒。曾考虑 UDP 简化方向，但 PWA 无原始 UDP，Web Push 需要 HTTPS，因此采用有限应用重试，不更换整个协议或削弱动作完整性。
 
 手机连接增加 15 秒空闲心跳与 45 秒接收超时，处理 WebSocket 看似 OPEN 却无响应；隐藏时继续关闭，前台重建。已允许通知的浏览器在应用全局修复登记，不要求打开通知设置页。原生动作回执同样全局只读跟踪，仅找到真实原生收件证据才解除未知状态，不把“终端继续工作”冒充手机消息已接收。
+
+## 2026-10-31: Phone user input is not peer messaging
+
+The interactive inbox and own-child hook remain peer channels in Claude's model context. They must not carry the ordinary phone composer: a phone user's `OK` otherwise arrives with instructions that it is not user approval. Earlier inbox/bridge delivery evidence proves message delivery only, not user-authority preservation.
+
+Idle interactive conversations can explicitly restart under the native background supervisor while retaining the session ID. Native terminal input then supplies real user messages and permission interaction. The UI discloses the restart and runtime-state limitations before the action. Native `/bg` in the original terminal is the alternative for provider-managed migration. Busy/waiting instances are left alone; unknown stop/launch outcomes never trigger a resend or a second writer.

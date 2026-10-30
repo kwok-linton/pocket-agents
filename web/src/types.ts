@@ -1,5 +1,6 @@
 export interface Capabilities {
-  inputMode?: "queue" | "inbox" | "bridge";
+  takeover?: boolean;
+  inputMode?: "queue" | "inbox" | "bridge" | "takeover";
   discover: boolean;
   create: boolean;
   resume: boolean;

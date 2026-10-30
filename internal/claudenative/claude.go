@@ -253,7 +253,8 @@ func applyAgent(s *core.Session, a agent) {
 		s.Capabilities.Terminal = true
 		s.Capabilities.Reason = "Attached to native background instance. Approvals and questions require native terminal; local and phone terminal share its input buffer."
 	} else if s.ExecutionID != "" {
-		s.Capabilities.Reason = "Existing interactive CLI has no supported attach channel. Read-only while it owns the session; use the one-time Pocket shell integration for future launches."
+		s.Capabilities.InputMode = "takeover"
+		s.Capabilities.Reason = interactiveInputReason
 	}
 	if a.WaitingFor != "" && s.ExecutionState == "alive" {
 		s.Error = a.WaitingFor + " — open native terminal"
@@ -343,15 +344,12 @@ func (p *Provider) Discover(ctx context.Context) ([]core.Session, error) {
 						presence.Status == "shell" && presence.WaitingFor == "" && transcriptStates[v.SessionID] == "completed" {
 						s.TurnState = "background"
 					}
-					s.Capabilities.Send = true
-					s.Capabilities.InputMode = "inbox"
-					if _, bridgeErr := p.bridge(s.ExecutionID); bridgeErr == nil {
-						s.Capabilities.InputMode = "bridge"
-					}
-					s.Capabilities.Reason = "Connected to the running native inbox. Messages reach this same process under its inbound rules; approvals still require the native terminal."
-					if s.Capabilities.InputMode == "bridge" {
-						s.Capabilities.Reason = "Connected through this native session own command hook. Explicit inbound hold/refuse and native tool permissions remain enforced."
-					}
+					// Peer inboxes never carry the user's authority, including the
+					// own-child bridge. Do not expose them as the chat composer.
+					s.Capabilities.Send = false
+					s.Capabilities.InputMode = "takeover"
+					s.Capabilities.Takeover = takeoverIdle(v, presence)
+					s.Capabilities.Reason = interactiveInputReason
 				}
 			}
 			byID[v.SessionID] = s
@@ -518,7 +516,10 @@ func (p *Provider) Execute(ctx context.Context, a core.Action) (core.Result, err
 	}
 	id := a.ExecutionID
 	if current.Kind == "interactive" && a.Kind == "send" {
-		return p.sendInbox(ctx, a, *current)
+		return r, errors.New(interactiveInputReason)
+	}
+	if a.Kind == "takeover" {
+		return p.takeover(ctx, a, *current)
 	}
 	if current.Kind != "background" {
 		return r, errors.New("unmanaged interactive CLI is read-only; do not create a second writer")

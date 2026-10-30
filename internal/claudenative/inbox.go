@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -103,103 +102,8 @@ func (p *Provider) displayPhoneDeliveries(h *core.History, id string) {
 	for i := range h.Messages {
 		if text, ok := byID[h.Messages[i].ID]; ok {
 			h.Messages[i].Role = "user"
-			h.Messages[i].Kind = "phone_message"
+			h.Messages[i].Kind = "phone_peer_message"
 			h.Messages[i].Text = text
-		}
-	}
-}
-func (p *Provider) sendInbox(ctx context.Context, a core.Action, current agent) (core.Result, error) {
-	r := core.Result{ActionID: a.ID, NativeID: a.NativeID, ExecutionID: a.ExecutionID, Status: "rejected"}
-	if strings.TrimSpace(a.Text) == "" || len(a.Text) > 64<<10 {
-		return r, errors.New("message must contain 1–65536 bytes")
-	}
-	v, err := p.inbox(current)
-	if err != nil {
-		return r, err
-	}
-	// Native peer delivery preserves the receiver's inbound policy. It does
-	// not impersonate a terminal keystroke or approve a native permission.
-	digest := sha256.Sum256([]byte(a.ID))
-	marker := "[Pocket Agents message " + hex.EncodeToString(digest[:]) + "]\n"
-	body := marker + a.Text
-	started := time.Now()
-	if bridge, bridgeErr := p.bridge(a.ExecutionID); bridgeErr == nil {
-		if err = sendThroughBridge(ctx, bridge, a, body); err != nil {
-			r.Status = "unknown"
-			r.Message = "会话桥接未确认投递。请核对原生会话，系统不会改走其他通道或自动重发。"
-			return r, nil
-		}
-	} else {
-		var d net.Dialer
-		conn, err := d.DialContext(ctx, "unix", v.Socket)
-		if err != nil {
-			return r, err
-		}
-		defer conn.Close()
-		_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
-		enc := json.NewEncoder(conn)
-		keyHash := sha256.Sum256([]byte(v.Socket))
-		keyPath := filepath.Join(p.profile.Home, "sessions", fmt.Sprintf("%d.%x.key", v.PID, keyHash))
-		if ownedPrivate(keyPath, false) == nil {
-			var key struct {
-				PeerToken string `json:"peerToken"`
-				ProcStart string `json:"procStart"`
-			}
-			b, e := os.ReadFile(keyPath)
-			if e == nil && json.Unmarshal(b, &key) == nil && key.ProcStart == v.ProcStart && key.PeerToken != "" {
-				if err = enc.Encode(map[string]string{"type": "auth", "token": key.PeerToken}); err != nil {
-					return r, err
-				}
-			}
-		}
-		// Recheck generation immediately before writing user content.
-		if executionID(current) != a.ExecutionID {
-			return r, errors.New("native execution changed before delivery")
-		}
-		frame := map[string]any{"msgV": 1, "type": "user", "msg_id": a.ID, "session_id": a.NativeID, "priority": "next", "message": map[string]string{"role": "user", "content": body}}
-		if err = enc.Encode(frame); err != nil {
-			r.Status = "unknown"
-			r.Message = "Native socket write failed; delivery is unknown. Do not retry blindly."
-			return r, nil
-		}
-		if unix, ok := conn.(*net.UnixConn); ok {
-			_ = unix.CloseWrite()
-		}
-	}
-	r.Status = "submitted"
-	r.Message = "尚未确认 Claude 收到。原生终端可能正在等待跨会话投递确认；若看到 Held message，请在终端选择 Deliver 或 Deny。请勿重复发送，确认后点击查询结果。"
-	r.Data = json.RawMessage(`{"delivery":"native_inbox"}`)
-	timer := time.NewTimer(4 * time.Second)
-	defer timer.Stop()
-	tick := time.NewTicker(100 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		path, pathErr := p.findPath(a.NativeID)
-		var h core.History
-		e := pathErr
-		if e == nil {
-			h, e = readHistory(ctx, path, "", 30)
-		}
-		if e == nil {
-			for _, m := range h.Messages {
-				if (m.Role == "user" || m.Kind == "peer_message") && !m.At.Before(started) && strings.Contains(m.Text, body) {
-					r.Status = "accepted"
-					r.Message = "Native transcript confirms delivery to the same running process. Peer messages cannot approve permissions."
-					if p.profile.DataDir != "" {
-						_ = os.MkdirAll(p.deliveryDir(), 0700)
-						b, _ := json.Marshal(phoneDelivery{a.NativeID, m.ID, a.Text})
-						_ = os.WriteFile(filepath.Join(p.deliveryDir(), hex.EncodeToString(digest[:])+".json"), b, 0600)
-					}
-					return r, nil
-				}
-			}
-		}
-		select {
-		case <-ctx.Done():
-			return r, nil
-		case <-timer.C:
-			return r, nil
-		case <-tick.C:
 		}
 	}
 }
@@ -212,7 +116,7 @@ type terminalDelivery struct {
 }
 
 // ReconcileResult is read-only: a successful socket write alone is never delivery.
-// The unique action marker also reconciles messages approved after sendInbox times out.
+// Legacy peer action markers remain readable for deliveries pending before the upgrade.
 func (p *Provider) ReconcileResult(ctx context.Context, a core.Action, previous core.Result) (core.Result, error) {
 	if a.Kind == "terminate" && (previous.Status == "submitted" || previous.Status == "unknown") {
 		previous.Status, previous.Message = "unknown", stopUnconfirmed

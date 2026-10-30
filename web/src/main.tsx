@@ -265,11 +265,11 @@ function ActionStatus({
     const timer = setTimeout(() => dismiss.current(), remaining);
     return () => clearTimeout(timer);
   }, [tracked.action.id, tracked.at, result.status]);
-  const operation = ({ delete: t("删除原生会话"), rename: t("原生会话改名"), send: t("发送消息"), interrupt: t("停止当前轮次"), terminate: t("结束实例"), create: t("创建会话"), resume: t("继续会话"), approve: t("处理审批"), terminal_input: t("终端输入") } as Record<string, string>)[tracked.action.kind] || t("操作");
+  const operation = ({ delete: t("删除原生会话"), rename: t("原生会话改名"), send: t("发送消息"), interrupt: t("停止当前轮次"), terminate: t("结束实例"), create: t("创建会话"), resume: t("继续会话"), takeover: t("启用手机控制"), approve: t("处理审批"), terminal_input: t("终端输入") } as Record<string, string>)[tracked.action.kind] || t("操作");
   if (result.status === "accepted") {
     // Opening the terminal or pressing a key is visible in its own panel; a
     // lasting "delivered" line there says nothing about the conversation.
-    const accepted = ({ send: t("已送达"), rename: t("原生名称已更新"), interrupt: t("停止请求已送达，等待本轮结束"), terminate: t("结束请求已送达"), resume: t("已继续会话"), create: t("会话已创建") } as Record<string, string>)[tracked.action.kind];
+    const accepted = ({ send: t("已送达"), rename: t("原生名称已更新"), interrupt: t("停止请求已送达，等待本轮结束"), terminate: t("结束请求已送达"), resume: t("已继续会话"), takeover: t("已启用手机控制"), create: t("会话已创建") } as Record<string, string>)[tracked.action.kind];
     if (!accepted) return null;
     return <p className="delivery-status" role="status">{(result.data as { delivery?: string } | undefined)?.delivery === "native_queue" ? t("已排队，等待当前任务结束") : accepted}</p>;
   }
@@ -1895,7 +1895,7 @@ function Conversation({
         continue;
       }
       for (const message of group.messages) {
-        if (previous && previous.role === message.role && Date.parse(message.at) - Date.parse(previous.at) < 300000) continued.add(message.id);
+        if (previous && previous.role === message.role && message.kind !== "phone_peer_message" && previous.kind === message.kind && Date.parse(message.at) - Date.parse(previous.at) < 300000) continued.add(message.id);
         previous = message;
       }
     }
@@ -2149,7 +2149,7 @@ function Conversation({
                     <div className="message-label">
                       <span>
                         {message.role === "user"
-                          ? t("你")
+                          ? message.kind === "phone_peer_message" ? t("你（旧版转发，不能用于批准）") : t("你")
                           : message.role === "assistant"
                             ? providerName(session.provider)
                             : message.role === "error"
@@ -2180,6 +2180,17 @@ function Conversation({
       )}
       </div>
       <div className={`conversation-controls${writing ? " is-writing" : ""}`}>
+        {capability.inputMode === "takeover" && <section className="native-attention" aria-label={t("启用手机控制")}>
+          <div><strong>{t("让手机消息作为本人输入")}</strong>
+          <p>{t("此会话仍在电脑终端运行。旧转发通道不能传达你的批准；启用手机控制后，可以正常发消息和处理审批。")}</p>
+          {!capability.takeover && <p>{t("请等当前工作或原生对话结束后再接管。也可以在原终端执行 /bg，保留原生运行设置并转到后台。")}</p>}
+          </div>
+          <button type="button" className="button primary" disabled={!capability.takeover || busy || blocked || !device?.online} onClick={() => {
+            if (window.confirm(t("启用手机控制将结束当前空闲进程，并恢复同一会话的历史。进程内的临时授权、启动参数和后台任务可能不会保留；当前草稿不会发送。若要由 Claude 迁移运行设置，请先在原终端执行 /bg。现在重启并接管吗？"))) {
+              void execute({ ...target, kind: "takeover", cwd: session.cwd, decision: "restart" });
+            }
+          }}>{t("启用手机控制")}</button>
+        </section>}
         {nativeFailure && <div className="conversation-recovery">
           <button type="button" className="button" disabled={busy || !device?.online} title={t("填入继续对话的草稿，确认后发送")} onClick={() => { setDraft(current => current || t("请继续刚才未完成的任务。")); draftInput.current?.focus(); }}>{t("继续对话")}<Icon name="chevron" size={16} /></button>
         </div>}

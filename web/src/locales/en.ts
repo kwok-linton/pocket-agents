@@ -2,6 +2,13 @@
 // (and Chinese messages the backend sends). {0} inserts a value;
 // {0|one|many} picks singular/plural. `npm test` fails if a key is missing.
 export const en: Record<string, string> = {
+  "启用手机控制": "Enable phone control",
+  "已启用手机控制": "Phone control enabled",
+  "让手机消息作为本人输入": "Send phone messages as yourself",
+  "你（旧版转发，不能用于批准）": "You (legacy relay; not approval)",
+  "此会话仍在电脑终端运行。旧转发通道不能传达你的批准；启用手机控制后，可以正常发消息和处理审批。": "This chat is running in a computer terminal. The old relay cannot convey your approval. Enable phone control to send messages and handle approvals.",
+  "请等当前工作或原生对话结束后再接管。也可以在原终端执行 /bg，保留原生运行设置并转到后台。": "Wait until the current work or native dialog finishes. You can also run /bg in the original terminal to move to the background with native settings.",
+  "启用手机控制将结束当前空闲进程，并恢复同一会话的历史。进程内的临时授权、启动参数和后台任务可能不会保留；当前草稿不会发送。若要由 Claude 迁移运行设置，请先在原终端执行 /bg。现在重启并接管吗？": "Phone control will stop the idle process and resume the same conversation history. Temporary grants, launch flags and background tasks may not carry over. Your draft will not be sent. To let Claude migrate runtime settings instead, run /bg in the original terminal. Restart and take over now?",
   "点选项切换高亮；点高亮项确认。上方终端文字不能点击。": "Tap an option to highlight it; tap the highlighted option to confirm. The terminal text above is not clickable.",
   "点击选择": "Tap to select",
   "查看具体问题，再按提示输入回答或选择选项。": "Read the question, then enter your answer or choose an option.",
@@ -138,7 +145,6 @@ export const en: Record<string, string> = {
   "会话改名": "Rename session",
   "会话整理与详情": "Session organizing & details",
   "会话暂时不可用": "Session unavailable",
-  "会话桥接未确认投递。请核对原生会话，系统不会改走其他通道或自动重发。": "The session bridge didn't confirm delivery. Check the native session; the message won't be rerouted or resent automatically.",
   "会话正在等待你的回答": "The session is waiting for your answer",
   "会话状态已变化，请稍后再改名": "The session state changed. Try renaming again shortly.",
   "会话生成的图片": "Image generated in session",
@@ -276,7 +282,6 @@ export const en: Record<string, string> = {
   "尚未安装控制端时，需要先在自己的电脑安装。Linux 或无桌面服务器可使用安装后生成的一次性登录链接；已有安装可运行": "If the Hub isn’t installed yet, install it on your own computer first. On Linux or a headless server, use the one-time sign-in link generated after install; on an existing install, run",
   "尚未接入": "Not connected",
   "尚未接入AI执行设备。": "No AI devices connected yet.",
-  "尚未确认 Claude 收到。原生终端可能正在等待跨会话投递确认；若看到 Held message，请在终端选择 Deliver 或 Deny。请勿重复发送，确认后点击查询结果。": "Not yet confirmed that Claude received it. The native terminal may be waiting to confirm a cross-session delivery; if you see Held message, choose Deliver or Deny in the terminal. Don't send it again; after confirming, tap Check result.",
   "尚未确认改名结果，请刷新核对后再操作。": "The rename isn't confirmed yet. Refresh and check before trying again.",
   "尚未读取": "Not read yet",
   "尚未连接 Tailscale": "Not connected to Tailscale",

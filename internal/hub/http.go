@@ -466,7 +466,7 @@ func (h *Hub) action(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch a.Kind {
-	case "models", "delete", "rename", "create", "resume", "send", "approve", "interrupt", "terminate", "terminal", "terminal_input", "startup_status", "startup_input":
+	case "models", "delete", "rename", "create", "resume", "takeover", "send", "approve", "interrupt", "terminate", "terminal", "terminal_input", "startup_status", "startup_input":
 	default:
 		fail(w, 400, "unsupported action")
 		return
